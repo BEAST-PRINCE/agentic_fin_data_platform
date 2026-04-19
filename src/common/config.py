@@ -1,0 +1,34 @@
+"""
+Centralized configuration for the Agentic Datalake project.
+
+Loads settings from .env file and exposes them as module-level constants.
+All services (Kafka, MinIO) should import config from here
+rather than reading environment variables directly.
+"""
+
+import os
+from pathlib import Path
+from dotenv import load_dotenv
+
+# Load .env from project root
+_project_root = Path(__file__).resolve().parents[2]
+load_dotenv(_project_root / ".env")
+
+
+# =============================================================================
+# Kafka Configuration
+# =============================================================================
+KAFKA_BOOTSTRAP_SERVERS = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092")
+
+# =============================================================================
+# MinIO Configuration
+# =============================================================================
+MINIO_ENDPOINT = os.getenv("MINIO_ENDPOINT", "localhost:9000")
+MINIO_ACCESS_KEY = os.getenv("MINIO_ROOT_USER", "admin")
+MINIO_SECRET_KEY = os.getenv("MINIO_ROOT_PASSWORD", "password123")
+MINIO_SECURE = os.getenv("MINIO_SECURE", "false").lower() == "true"
+
+# Bucket names for the lakehouse layers
+MINIO_BRONZE_BUCKET = os.getenv("MINIO_BRONZE_BUCKET", "bronze")
+MINIO_SILVER_BUCKET = os.getenv("MINIO_SILVER_BUCKET", "silver")
+MINIO_GOLD_BUCKET = os.getenv("MINIO_GOLD_BUCKET", "gold")

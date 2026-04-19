@@ -1,0 +1,24 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+
+# Environments
+.env
+venv/
+
+# IDEs
+.vscode/
+.idea/
+
+# Project Data & Logs
+data/
+logs/
+*.csv
+*.parquet
+*.json
+
+# Jupyter Notebooks
+.ipynb_checkpoints
+
+# Execution Plan
+Executionplan.txt
