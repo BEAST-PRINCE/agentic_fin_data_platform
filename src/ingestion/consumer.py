@@ -1,14 +1,10 @@
 import json
-import logging
+import time
 from kafka import KafkaConsumer
 from src.common import config
+from src.common.logger import get_logger
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 class NewsConsumer:
     def __init__(self):
@@ -26,16 +22,21 @@ class NewsConsumer:
         logger.info(f"Initialized Kafka Consumer at {self.bootstrap_servers} for topic '{self.topic}'")
 
     def consume_data(self):
-        """Consume messages from Kafka and print them."""
+        """Consume messages from Kafka in batches."""
         logger.info("Starting to consume messages...")
+        batch_size = 100
+        batch = []
         try:
             for message in self.consumer:
                 data = message.value
-                # Printing a summary of the received news article
-                logger.info(f"Received Story: {data.get('title', 'No Title')} | Category: {data.get('category', 'N/A')}")
-                # You can uncomment the line below to see the full JSON
-                # print(json.dumps(data, indent=2))
+                batch.append(data)
                 
+                # TODO: Phase 2 - Write this batch to MinIO
+                if len(batch) >= batch_size:
+                    logger.info(f"Collected a batch of {len(batch)} messages. (Ready for MinIO)")
+                    batch.clear()
+                
+
         except KeyboardInterrupt:
             logger.info("Consumer stopped by user.")
         except Exception as e:

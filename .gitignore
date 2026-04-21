@@ -20,5 +20,9 @@ logs/
 # Jupyter Notebooks
 .ipynb_checkpoints
 
+# Runner Scripts
+*.ps1
+*.bat
+
 # Execution Plan
 Executionplan.txt
