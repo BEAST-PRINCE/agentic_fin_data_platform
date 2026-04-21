@@ -19,6 +19,8 @@ load_dotenv(_project_root / ".env")
 # Kafka Configuration
 # =============================================================================
 KAFKA_BOOTSTRAP_SERVERS = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092")
+KAFKA_TOPIC = os.getenv("KAFKA_TOPIC", "raw_news")
+RAW_DATA_PATH = os.getenv("RAW_DATA_PATH", "data/raw_data_source/News Dataset.csv")
 
 # =============================================================================
 # MinIO Configuration
