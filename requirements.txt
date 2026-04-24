@@ -5,9 +5,10 @@ cffi==2.0.0
 kafka-python==2.0.2
 kafka-python-ng==2.2.3
 minio==7.2.4
+py4j==0.10.9.7
 pycparser==3.0
 pycryptodome==3.23.0
+pyspark==3.5.1
 python-dotenv==1.0.1
 typing_extensions==4.15.0
 urllib3==2.6.3
-pyspark==3.5.1
