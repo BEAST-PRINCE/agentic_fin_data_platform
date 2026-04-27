@@ -2,8 +2,8 @@ import os
 import sys
 from collections import Counter
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import col, to_date, expr, udf, explode, count, lit
-from pyspark.sql.types import ArrayType, StringType
+from pyspark.sql.functions import col, to_date, expr, udf, explode, count, lit, size
+from pyspark.sql.types import ArrayType, StringType, StructType, StructField, DateType, IntegerType, TimestampType
 from pyspark.ml.feature import Tokenizer, StopWordsRemover
 
 # Ensure the project root is in the path
@@ -57,12 +57,45 @@ def process_gold_layer():
     df = df.withColumn("source_domain", expr("parse_url(url, 'HOST')"))
     df = df.withColumn("word_count", expr("size(split(content, ' '))"))
 
+    gold_base_path = f"s3a://{config.MINIO_GOLD_BUCKET}"
+
+    # =========================================================================
+    # Incremental Processing Logic
+    # =========================================================================
+    try:
+        # Try to read existing Gold data to find the latest processed date
+        existing_gold = spark.read.parquet(f"{gold_base_path}/daily_trends")
+        max_date_row = existing_gold.agg({"publish_date": "max"}).collect()[0]
+        max_date = max_date_row[0] if max_date_row else None
+    except Exception:
+        # Gold bucket or table might not exist yet
+        max_date = None
+
+    if max_date:
+        logger.info(f"Incremental mode: Processing only records after {max_date}")
+        df = df.filter(col("publish_date") > lit(max_date))
+    else:
+        logger.info("Full load mode: Processing all records")
+
+    if df.rdd.isEmpty():
+        logger.info("No new records to process. Exiting.")
+        spark.stop()
+        return
+
     # =========================================================================
     # 1. gold_daily_trends
     # =========================================================================
     logger.info("Building gold_daily_trends table...")
     gold_daily_trends = df.groupBy("publish_date", "source_domain", "category").agg(
         count("*").alias("total_articles")
+    )
+    
+    # DQ Gate & Schema Enforcement
+    gold_daily_trends = gold_daily_trends.filter(col("total_articles") > 0).select(
+        col("publish_date").cast(DateType()),
+        col("source_domain").cast(StringType()),
+        col("category").cast(StringType()),
+        col("total_articles").cast(IntegerType())
     )
 
     # =========================================================================
@@ -79,19 +112,24 @@ def process_gold_layer():
 
     # Extract keywords using our UDF
     enriched_df = cleanWordsData.withColumn("extracted_keywords", extract_top_keywords(col("filtered_words")))
+    
+    # DQ Gate: Ensure extracted_keywords isn't empty
+    enriched_df = enriched_df.filter(size(col("extracted_keywords")) > 0)
 
     # =========================================================================
     # 2. gold_articles_serving
     # =========================================================================
     logger.info("Building gold_articles_serving table...")
+    
+    # Schema Enforcement
     gold_articles_serving = enriched_df.select(
-        col("article_id"),
-        col("published_at").cast("timestamp").alias("publish_timestamp"),
-        col("source_domain"),
-        col("title"),
-        col("content").alias("clean_content"),
-        col("word_count"),
-        col("extracted_keywords")
+        col("article_id").cast(StringType()),
+        col("published_at").cast(TimestampType()).alias("publish_timestamp"),
+        col("source_domain").cast(StringType()),
+        col("title").cast(StringType()),
+        col("content").cast(StringType()).alias("clean_content"),
+        col("word_count").cast(IntegerType()),
+        col("extracted_keywords").cast(ArrayType(StringType()))
     )
 
     # =========================================================================
@@ -111,24 +149,33 @@ def process_gold_layer():
     gold_entity_mentions = exploded_df.groupBy("publish_date", "entity_name", "entity_type").agg(
         count("*").alias("mention_count")
     )
+    
+    # Schema Enforcement
+    gold_entity_mentions = gold_entity_mentions.filter(col("mention_count") > 0).select(
+        col("publish_date").cast(DateType()),
+        col("entity_name").cast(StringType()),
+        col("entity_type").cast(StringType()),
+        col("mention_count").cast(IntegerType())
+    )
 
     # =========================================================================
-    # Write to Gold layer
+    # Write to Gold layer with Partitioning and Append Mode
     # =========================================================================
     logger.info("Ensuring gold bucket exists...")
     minio_client = MinIOClient()
     minio_client.ensure_bucket_exists(config.MINIO_GOLD_BUCKET)
 
-    gold_base_path = f"s3a://{config.MINIO_GOLD_BUCKET}"
+    write_mode = "append"
     
     logger.info("Writing gold_daily_trends...")
-    gold_daily_trends.write.mode("overwrite").parquet(f"{gold_base_path}/daily_trends")
+    gold_daily_trends.write.mode(write_mode).partitionBy("publish_date").parquet(f"{gold_base_path}/daily_trends")
     
     logger.info("Writing gold_articles_serving...")
-    gold_articles_serving.write.mode("overwrite").parquet(f"{gold_base_path}/articles_serving")
+    # Not partitioning articles by date to avoid small files and keep lookup fast by ID, but can partition if desired.
+    gold_articles_serving.write.mode(write_mode).parquet(f"{gold_base_path}/articles_serving")
     
     logger.info("Writing gold_entity_mentions...")
-    gold_entity_mentions.write.mode("overwrite").parquet(f"{gold_base_path}/entity_mentions")
+    gold_entity_mentions.write.mode(write_mode).partitionBy("publish_date").parquet(f"{gold_base_path}/entity_mentions")
 
     logger.info("Gold Layer processing completed successfully!")
     spark.stop()
