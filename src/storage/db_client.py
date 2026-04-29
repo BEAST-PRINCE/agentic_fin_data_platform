@@ -3,7 +3,7 @@ import sys
 import duckdb
 
 # Ensure the project root is in the path
-sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 from src.common import config
 from src.common.logger import get_logger

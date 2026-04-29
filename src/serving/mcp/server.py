@@ -10,7 +10,7 @@ import mcp.types as types
 # Ensure the project root is in the path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))
 
-from src.serving.mcp.db_client import db
+from src.storage.db_client import db
 from src.common.logger import get_logger
 
 logger = get_logger(__name__)
