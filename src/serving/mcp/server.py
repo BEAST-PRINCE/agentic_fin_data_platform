@@ -125,22 +125,43 @@ async def handle_call_tool(
 
         elif name == "retrieve_articles":
             keyword = arguments.get("keyword", "")
-            category = arguments.get("category")
             limit = arguments.get("limit", 10)
             
-            path = db.get_gold_path("articles_serving")
-            
-            # Using basic ILIKE for text matching (Phase 5A)
-            # (Note: we join with daily_trends if category is needed, but for simplicity we'll just search text)
-            query = f"""
-                SELECT article_id, publish_timestamp, source_domain, title, word_count, extracted_keywords 
-                FROM read_parquet('{path}') 
-                WHERE title ILIKE '%{keyword}%' OR clean_content ILIKE '%{keyword}%'
-                LIMIT {limit}
-            """
-            
-            results = db.query(query)
-            return [types.TextContent(type="text", text=str(results) if results else "No articles found.")]
+            try:
+                from src.processing.embeddings import EmbedderFactory
+                from qdrant_client import QdrantClient
+                
+                # Load embedder and Qdrant client
+                # Note: In a production server, these should be initialized globally once
+                embedder = EmbedderFactory.get_embedder(engine='sentence-transformers', device='cuda')
+                qdrant = QdrantClient(url="http://localhost:6333")
+                
+                # Embed the query
+                query_vector = embedder.embed([keyword])[0]
+                
+                # Search Qdrant
+                search_results = qdrant.query_points(
+                    collection_name="articles",
+                    query=query_vector,
+                    limit=limit
+                ).points
+                
+                # Format results
+                formatted_results = []
+                for hit in search_results:
+                    formatted_results.append({
+                        "article_id": hit.id,
+                        "score": hit.score,
+                        "title": hit.payload.get("title"),
+                        "source_domain": hit.payload.get("source_domain"),
+                        "publish_timestamp": hit.payload.get("publish_timestamp"),
+                        "extracted_keywords": hit.payload.get("extracted_keywords", [])
+                    })
+                    
+                return [types.TextContent(type="text", text=str(formatted_results) if formatted_results else "No articles found.")]
+            except Exception as e:
+                logger.error(f"Semantic search failed: {e}")
+                return [types.TextContent(type="text", text=f"Semantic Search failed: {e}")]
 
         elif name == "get_daily_trends":
             start_date = arguments.get("start_date")
