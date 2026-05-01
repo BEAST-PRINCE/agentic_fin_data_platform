@@ -11,6 +11,7 @@ import mcp.types as types
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))
 
 from src.storage.db_client import db
+from src.common import config
 from src.common.logger import get_logger
 
 logger = get_logger(__name__)
@@ -133,7 +134,7 @@ async def handle_call_tool(
                 
                 # Load embedder and Qdrant client
                 # Note: In a production server, these should be initialized globally once
-                embedder = EmbedderFactory.get_embedder(engine='sentence-transformers', device='cuda')
+                embedder = EmbedderFactory.get_embedder(engine=config.VECTOR_EMBEDDING_ENGINE, device='cuda')
                 qdrant = QdrantClient(url="http://localhost:6333")
                 
                 # Embed the query

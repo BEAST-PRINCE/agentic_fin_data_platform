@@ -34,3 +34,9 @@ MINIO_SECURE = os.getenv("MINIO_SECURE", "false").lower() == "true"
 MINIO_BRONZE_BUCKET = os.getenv("MINIO_BRONZE_BUCKET", "bronze")
 MINIO_SILVER_BUCKET = os.getenv("MINIO_SILVER_BUCKET", "silver")
 MINIO_GOLD_BUCKET = os.getenv("MINIO_GOLD_BUCKET", "gold")
+
+# =============================================================================
+# Vector & AI Configuration
+# =============================================================================
+# Options: 'sentence-transformers' (GPU priority) or 'fastembed' (Lightweight fallback)
+VECTOR_EMBEDDING_ENGINE = os.getenv("VECTOR_EMBEDDING_ENGINE", "sentence-transformers")

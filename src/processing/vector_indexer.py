@@ -6,6 +6,7 @@ from typing import List, Dict
 # Ensure the project root is in the path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
+from src.common import config
 from src.common.logger import get_logger
 from src.storage.db_client import db
 from src.processing.embeddings import EmbedderFactory
@@ -92,6 +93,6 @@ def run_indexing(engine: str = 'sentence-transformers'):
     logger.info("Vector Indexing Job Completed Successfully!")
 
 if __name__ == "__main__":
-    # Optional: pass engine as argument, defaults to sentence-transformers
-    engine = sys.argv[1] if len(sys.argv) > 1 else 'sentence-transformers'
-    run_indexing(engine=engine)
+    # The engine is now managed via src.common.config or .env
+    # engine = sys.argv[1] if len(sys.argv) > 1 else 'sentence-transformers'
+    run_indexing(engine=config.VECTOR_EMBEDDING_ENGINE)
