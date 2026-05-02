@@ -113,6 +113,23 @@ services:
     networks:
       - datalake-net
 
+#  ollama:
+#    image: ollama/ollama:latest
+#    container_name: ollama
+#    ports:
+#      - "11434:11434"
+#    volumes:
+#      - ./data/ollama:/root/.ollama
+#    # deploy: # Uncomment for GPU support
+#    #   resources:
+#    #     reservations:
+#    #       devices:
+#    #         - driver: nvidia
+#    #           count: 1
+#    #           capabilities: [gpu]
+#    networks:
+#      - datalake-net
+
 networks:
   datalake-net:
     driver: bridge
