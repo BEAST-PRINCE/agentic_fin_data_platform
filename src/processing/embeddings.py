@@ -1,4 +1,5 @@
 import abc
+import sys
 from typing import List
 
 class BaseEmbedder(abc.ABC):
@@ -12,8 +13,9 @@ class SentenceTransformerEmbedder(BaseEmbedder):
         import torch
         
         # Fallback to CPU if CUDA is not actually available
+        # IMPORTANT: Must use stderr — stdout is the MCP JSONRPC transport
         if device == 'cuda' and not torch.cuda.is_available():
-            print("WARNING: CUDA requested but not available. Falling back to CPU.")
+            print("WARNING: CUDA requested but not available. Falling back to CPU.", file=sys.stderr)
             device = 'cpu'
             
         self.model = SentenceTransformer(model_name, device=device)

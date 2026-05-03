@@ -40,3 +40,6 @@ MINIO_GOLD_BUCKET = os.getenv("MINIO_GOLD_BUCKET", "gold")
 # =============================================================================
 # Options: 'sentence-transformers' (GPU priority) or 'fastembed' (Lightweight fallback)
 VECTOR_EMBEDDING_ENGINE = os.getenv("VECTOR_EMBEDDING_ENGINE", "sentence-transformers")
+
+# The model used by the AI Agent (e.g. 'ollama/gemma:2b', 'ollama/llama3.2:3b', etc.)
+AGENT_MODEL = os.getenv("AGENT_MODEL", "ollama/gemma:2b")

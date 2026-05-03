@@ -11,8 +11,8 @@ def get_logger(name: str) -> logging.Logger:
     if not logger.handlers:
         logger.setLevel(logging.INFO)
         
-        # Create console handler
-        ch = logging.StreamHandler(sys.stdout)
+        # CRITICAL: MCP stdio protocol uses stdout for JSON-RPC — logs MUST go to stderr
+        ch = logging.StreamHandler(sys.stderr)
         ch.setLevel(logging.INFO)
         
         # Create formatter and add it to the handler

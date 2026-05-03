@@ -16,6 +16,27 @@ from src.common.logger import get_logger
 
 logger = get_logger(__name__)
 
+# ─── Global singletons for the vector search pipeline ───
+# Lazy-initialized on first use to avoid startup cost if tools aren't called.
+_embedder = None
+_qdrant = None
+
+def _get_embedder():
+    """Lazily initialize the sentence-transformer embedder (once per process)."""
+    global _embedder
+    if _embedder is None:
+        from src.processing.embeddings import EmbedderFactory
+        _embedder = EmbedderFactory.get_embedder(engine=config.VECTOR_EMBEDDING_ENGINE, device='cuda')
+    return _embedder
+
+def _get_qdrant():
+    """Lazily initialize the Qdrant client (once per process)."""
+    global _qdrant
+    if _qdrant is None:
+        from qdrant_client import QdrantClient
+        _qdrant = QdrantClient(url="http://localhost:6333")
+    return _qdrant
+
 # Initialize the MCP Server
 server = Server("agentic_datalake_mcp")
 
@@ -129,13 +150,8 @@ async def handle_call_tool(
             limit = arguments.get("limit", 10)
             
             try:
-                from src.processing.embeddings import EmbedderFactory
-                from qdrant_client import QdrantClient
-                
-                # Load embedder and Qdrant client
-                # Note: In a production server, these should be initialized globally once
-                embedder = EmbedderFactory.get_embedder(engine=config.VECTOR_EMBEDDING_ENGINE, device='cuda')
-                qdrant = QdrantClient(url="http://localhost:6333")
+                embedder = _get_embedder()
+                qdrant = _get_qdrant()
                 
                 # Embed the query
                 query_vector = embedder.embed([keyword])[0]
