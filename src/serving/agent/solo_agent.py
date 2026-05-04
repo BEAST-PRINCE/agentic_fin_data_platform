@@ -107,7 +107,6 @@ async def run_solo_agent():
                     session_id="session_1",
                     new_message=message
                 ):
-                    # Only print the final agent response, not intermediate tool steps
                     if event.is_final_response():
                         if event.content and event.content.parts:
                             for part in event.content.parts:
