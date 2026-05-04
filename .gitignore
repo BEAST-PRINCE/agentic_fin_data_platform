@@ -12,6 +12,7 @@ venv/
 
 # Project Data & Logs
 data/
+webpages_html/
 logs/
 *.csv
 *.parquet
