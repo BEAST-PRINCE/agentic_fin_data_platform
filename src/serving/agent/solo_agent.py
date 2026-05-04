@@ -57,17 +57,22 @@ async def run_solo_agent():
             command=sys.executable,
             args=[mcp_server_script]
         ),
-        timeout=120  # seconds — give ollama enough time to respond
+        timeout=150  # seconds — give ollama enough time to respond
     )
 
     # McpToolset does not support async context manager — use try/finally with close()
     mcp_toolset = McpToolset(connection_params=server_params)
-    print("Configured MCP Toolset (timeout=120s).")
+    print("Configured MCP Toolset (timeout=150s).")
+
+    # Ensure the model string has the ollama/ prefix required by LiteLLM
+    model_name = config.AGENT_MODEL
+    if not model_name.startswith("ollama/"):
+        model_name = f"ollama/{model_name}"
 
     try:
         agent = Agent(
             name="SoloResearcher",
-            model=config.AGENT_MODEL,  # Fetched from .env via config.py
+            model=model_name,  # Fetched from .env via config.py
             tools=[mcp_toolset],
             instruction=SYSTEM_INSTRUCTION
         )

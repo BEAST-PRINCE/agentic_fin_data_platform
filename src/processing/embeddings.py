@@ -26,7 +26,7 @@ class SentenceTransformerEmbedder(BaseEmbedder):
         return embeddings.tolist()
 
 class FastEmbedEmbedder(BaseEmbedder):
-    def __init__(self, model_name: str = 'BAAI/bge-small-en-v1.5'):
+    def __init__(self, model_name: str = 'BAAI/bge-small-en-v1.5', **kwargs):
         from fastembed import TextEmbedding
         self.model = TextEmbedding(model_name=model_name)
         
