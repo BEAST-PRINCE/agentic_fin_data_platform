@@ -3,10 +3,10 @@ from scrapy.linkextractors import LinkExtractor
 from scrapy.spiders import CrawlSpider, Rule
 
 
-class MintStocksTodaySpider(CrawlSpider):
-    name = "mint_stocks_today"
+class MintCompanies(CrawlSpider):
+    name = "mint_companies"
     allowed_domains = ["livemint.com"]
-    start_urls = ["https://livemint.com"]
+    start_urls = ["https://www.livemint.com/companies"]
 
     rules = (Rule(LinkExtractor(allow=r"Items/"), callback="parse_item", follow=True),)
 
