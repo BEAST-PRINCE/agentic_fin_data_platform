@@ -26,7 +26,7 @@ class MintCompaniesSpider(CrawlSpider):
                 allow=r"/companies/.*\.html"
             ),
             callback="parse_article",
-            follow=True
+            follow=False
         ),
     )
 
