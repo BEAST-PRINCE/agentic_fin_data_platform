@@ -14,13 +14,13 @@ if project_root not in sys.path:
 from src.common.logger import get_logger
 
 # Initialize central logger
-logger = get_logger("mint_companies_spider")
+logger = get_logger("mint_cryptocurrencies_spider")
 
 
 class MintCompaniesSpider(CrawlSpider):
-    name = "mint_companies"
+    name = "mint_cryptocurrencies"
     allowed_domains = ["livemint.com"]
-    start_urls = ["https://www.livemint.com/companies"]
+    start_urls = ["https://www.livemint.com/cryptocurrency"]
 
     custom_settings = {
         "USER_AGENT": (
@@ -32,7 +32,7 @@ class MintCompaniesSpider(CrawlSpider):
 
     rules = (
         Rule(
-            LinkExtractor(allow=r"/companies/.*\.html"),
+            LinkExtractor(allow=r"/cryptocurrency/.*\.html"),
             callback="parse_article",
             follow=False
         ),
