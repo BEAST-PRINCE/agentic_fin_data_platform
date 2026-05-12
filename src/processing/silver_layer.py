@@ -38,7 +38,7 @@ def process_silver_layer():
     
     logger.info(f"Reading raw data from Bronze layer: {bronze_path}")
     # Read all JSONL files in the bronze bucket under raw_news/
-    df = spark.read.json(bronze_path)
+    df = spark.read.option("recursiveFileLookup", "true").json(bronze_path)
 
     initial_count = df.count()
     logger.info(f"Loaded {initial_count} raw records.")

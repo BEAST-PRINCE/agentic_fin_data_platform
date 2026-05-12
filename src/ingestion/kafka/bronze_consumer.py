@@ -59,14 +59,14 @@ class BronzeConsumer:
                 logger.error(f"Could not create bucket {BRONZE_BUCKET}: {e2}")
 
     def generate_s3_key(self, source, article_id):
-        # Format: source/year=YYYY/month=MM/day=DD/article_id.json
+        # Format: raw_news/source/year=YYYY/month=MM/day=DD/article_id.json
         now = datetime.utcnow()
         safe_source = source.replace(" ", "_").lower() if source else "unknown"
         year = now.strftime("%Y")
         month = now.strftime("%m")
         day = now.strftime("%d")
         
-        key = f"{safe_source}/year={year}/month={month}/day={day}/{article_id}.json"
+        key = f"raw_news/{safe_source}/year={year}/month={month}/day={day}/{article_id}.json"
         return key
 
     def start_consuming(self):
