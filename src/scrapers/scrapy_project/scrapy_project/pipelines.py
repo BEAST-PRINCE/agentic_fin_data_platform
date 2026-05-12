@@ -7,6 +7,8 @@
 # useful for handling different item types with a single interface
 import sys
 import os
+import hashlib
+import random
 from scrapy.exceptions import DropItem
 from itemadapter import ItemAdapter
 
@@ -34,6 +36,17 @@ class KafkaPublishPipeline:
         if self.publisher:
             self.publisher.close()
             logger.info(f"Closed Kafka publisher for spider {spider.name}")
+    
+    def generate_article_id(self, url, title, source, content):
+        """Generate a deterministic MD5 hash for article_id based on priority."""
+        if url:
+            id_input = url
+        elif title or source:
+            id_input = f"{title or ''}{source or ''}"
+        else:
+            id_input = content or str(random.random())
+            
+        return hashlib.md5(id_input.encode('utf-8')).hexdigest()
 
     def process_item(self, item, spider):
         adapter = ItemAdapter(item)
@@ -50,6 +63,15 @@ class KafkaPublishPipeline:
             error_msg = f"Missing required fields: {', '.join(missing_or_null)} in URL: {adapter.get('url')}"
             logger.warning(error_msg)
             raise DropItem(error_msg)
+
+        # Generate deterministic article_id
+        article_id = self.generate_article_id(
+            adapter.get('url'),
+            adapter.get('title'),
+            adapter.get('source'),
+            adapter.get('content')
+        )
+        adapter.set('article_id', article_id)
             
         # Convert item to dict and publish
         item_dict = adapter.asdict()
@@ -59,3 +81,4 @@ class KafkaPublishPipeline:
             logger.error(f"Failed to publish item to Kafka: {adapter.get('url')}")
             
         return item
+

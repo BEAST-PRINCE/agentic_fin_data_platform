@@ -12,6 +12,7 @@ class ScrapyProjectItem(scrapy.Item):
     pass
 
 class NewsArticle(scrapy.Item):
+    article_id = scrapy.Field()
     title = scrapy.Field()
     content = scrapy.Field()
     description = scrapy.Field()

@@ -2,6 +2,7 @@ import os
 import json
 import uuid
 import logging
+import hashlib
 from datetime import datetime, timezone
 from kafka import KafkaProducer
 
@@ -29,7 +30,21 @@ class BronzePublisher:
             return False
 
         # Ensure schema fields
-        article_id = str(uuid.uuid5(uuid.NAMESPACE_URL, article_data.get('url', str(uuid.uuid4()))))
+        article_id = article_data.get('article_id')
+        if not article_id:
+            url = article_data.get('url')
+            title = article_data.get('title')
+            source = article_data.get('source')
+            content = article_data.get('content')
+            
+            if url:
+                id_input = url
+            elif title or source:
+                id_input = f"{title or ''}{source or ''}"
+            else:
+                id_input = content or str(uuid.uuid4())
+                
+            article_id = hashlib.md5(id_input.encode('utf-8')).hexdigest()
         
         payload = {
             "article_id": article_id,
