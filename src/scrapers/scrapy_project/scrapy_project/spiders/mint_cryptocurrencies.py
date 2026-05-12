@@ -1,10 +1,11 @@
 import scrapy
 from scrapy.linkextractors import LinkExtractor
 from scrapy.spiders import CrawlSpider, Rule
-from datetime import datetime
+from datetime import datetime, timezone
 import json
 import sys
 import os
+from scrapy_project.items import NewsArticle
 
 # Add the project root to sys.path to import central modules
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", ".."))
@@ -80,38 +81,38 @@ class MintCompaniesSpider(CrawlSpider):
                     '//div[contains(@class, "storyParagraph")]//p//text()'
                 ).getall()
             )
-            article = {
-                "title": title,
-                "content": content,
-                "description": None,
-                "source": "LiveMint",
-                "url": response.url,
-                "published_at": None,
-                "author": None,
-                "category": "companies",
-                "ingested_at": datetime.utcnow().isoformat(),
-                "tags": [],
-            }
+            article = NewsArticle(
+                title=title,
+                content=content,
+                description=None,
+                source="LiveMint",
+                url=response.url,
+                published_at=None,
+                author=None,
+                category="companies",
+                ingested_at=datetime.now(timezone.utc).isoformat(),
+                tags=[],
+            )
             logger.info(f"Successfully scraped article (fallback) from: {response.url}")
             yield article
             return
 
-        article = {
-            "title": article_data.get("headline"),
-            "content": article_data.get("articleBody"),
-            "description": article_data.get("description"),
-            "source": "LiveMint",
-            "url": article_data.get("url"),
-            "published_at": article_data.get("datePublished"),
-            "author": (
+        article = NewsArticle(
+            title=article_data.get("headline"),
+            content=article_data.get("articleBody"),
+            description=article_data.get("description"),
+            source="LiveMint",
+            url=article_data.get("url"),
+            published_at=article_data.get("datePublished"),
+            author=(
                 article_data.get("author", {})
                 .get("name")
                 if isinstance(article_data.get("author"), dict)
                 else article_data.get("author")
             ),
-            "category": "companies",
-            "ingested_at": datetime.utcnow().isoformat(),
-            "tags": article_data.get("keywords", []),
-        }
+            category="companies",
+            ingested_at=datetime.now(timezone.utc).isoformat(),
+            tags=article_data.get("keywords", []),
+        )
         logger.info(f"Successfully scraped article from: {response.url}")
         yield article

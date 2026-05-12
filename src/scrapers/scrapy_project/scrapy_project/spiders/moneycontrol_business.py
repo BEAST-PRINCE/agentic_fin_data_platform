@@ -2,6 +2,7 @@ import scrapy
 from scrapy.linkextractors import LinkExtractor
 from scrapy.spiders import CrawlSpider, Rule
 from datetime import datetime, timezone
+from scrapy_project.items import NewsArticle
 import sys
 import os
 
@@ -60,17 +61,17 @@ class MoneycontrolBusinessSpider(CrawlSpider):
         else:
             tags = []
 
-        article = {
-            "title": title,
-            "content": content,
-            "description": description,
-            "source": "Moneycontrol",
-            "url": response.url,
-            "published_at": published_at,
-            "author": author,
-            "category": category,
-            "ingested_at": datetime.utcnow().isoformat(),
-            "tags": tags,
-        }
+        article = NewsArticle(
+            title=title,
+            content=content,
+            description=description,
+            source="Moneycontrol",
+            url=response.url,
+            published_at=published_at,
+            author=author,
+            category=category,
+            ingested_at=datetime.now(timezone.utc).isoformat(),
+            tags=tags,
+        )
         logger.info(f"Successfully scraped article from: {response.url}")
         yield article

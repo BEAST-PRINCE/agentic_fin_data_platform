@@ -5,9 +5,57 @@
 
 
 # useful for handling different item types with a single interface
+import sys
+import os
+from scrapy.exceptions import DropItem
 from itemadapter import ItemAdapter
 
+# Add project root to sys.path to import modules
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", ".."))
+if project_root not in sys.path:
+    sys.path.append(project_root)
 
-class ScrapyProjectPipeline:
+from src.acquisition.bronze_publisher import BronzePublisher
+from src.common.logger import get_logger
+
+logger = get_logger("kafka_pipeline")
+
+class KafkaPublishPipeline:
+    def __init__(self):
+        self.publisher = None
+
+    def open_spider(self, spider):
+        # Initialize publisher when spider opens
+        self.publisher = BronzePublisher()
+        logger.info(f"Initialized Kafka publisher for spider {spider.name}")
+
+    def close_spider(self, spider):
+        # Close publisher when spider closes
+        if self.publisher:
+            self.publisher.close()
+            logger.info(f"Closed Kafka publisher for spider {spider.name}")
+
     def process_item(self, item, spider):
+        adapter = ItemAdapter(item)
+        
+        # Check for null values in required fields
+        required_fields = ['title', 'content', 'url', 'published_at', 'author']
+        missing_or_null = []
+        for field in required_fields:
+            val = adapter.get(field)
+            if val is None or str(val).strip() == "":
+                missing_or_null.append(field)
+                
+        if missing_or_null:
+            error_msg = f"Missing required fields: {', '.join(missing_or_null)} in URL: {adapter.get('url')}"
+            logger.warning(error_msg)
+            raise DropItem(error_msg)
+            
+        # Convert item to dict and publish
+        item_dict = adapter.asdict()
+        success = self.publisher.publish_article(item_dict)
+        
+        if not success:
+            logger.error(f"Failed to publish item to Kafka: {adapter.get('url')}")
+            
         return item
