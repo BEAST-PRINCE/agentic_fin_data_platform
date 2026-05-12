@@ -71,7 +71,7 @@ class KafkaPublishPipeline:
             adapter.get('source'),
             adapter.get('content')
         )
-        adapter.set('article_id', article_id)
+        adapter['article_id'] = article_id
             
         # Convert item to dict and publish
         item_dict = adapter.asdict()

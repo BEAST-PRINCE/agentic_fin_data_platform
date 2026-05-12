@@ -29,13 +29,14 @@ class MintCompaniesSpider(CrawlSpider):
             "AppleWebKit/537.36 (KHTML, like Gecko) "
             "Chrome/136.0.0.0 Safari/537.36"
         ),
+        "DEPTH_LIMIT": 3,
     }
 
     rules = (
         Rule(
             LinkExtractor(allow=r"/companies/.*\.html"),
             callback="parse_article",
-            follow=False
+            follow=True
         ),
     )
 
