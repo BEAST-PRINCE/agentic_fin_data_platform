@@ -18,6 +18,7 @@ temp/
 *.csv
 *.parquet
 *.json
+*.png
 
 # Jupyter Notebooks
 .ipynb_checkpoints
