@@ -13,13 +13,38 @@ from src.processing.embeddings import EmbedderFactory
 from qdrant_client import QdrantClient
 from qdrant_client.http.models import Distance, VectorParams, PointStruct
 
+import json
+from pathlib import Path
+
 logger = get_logger(__name__)
 
 # Config
 QDRANT_URL = "http://localhost:6333"
 COLLECTION_NAME = "articles"
-EMBEDDING_DIMENSIONS = 384  # all-MiniLM-L6-v2 and bge-small-en-v1.5 both use 384 dims
+EMBEDDING_DIMENSIONS = config.VECTOR_EMBEDDING_DIMENSIONS
 BATCH_SIZE = 64
+STATE_FILE_PATH = Path("data/vector_indexer_state.json")
+
+def get_last_indexed_timestamp() -> str:
+    """Retrieve the latest publish_timestamp from the local state tracker."""
+    if STATE_FILE_PATH.exists():
+        try:
+            with open(STATE_FILE_PATH, 'r') as f:
+                state = json.load(f)
+                return state.get("last_indexed_timestamp", "1970-01-01T00:00:00")
+        except Exception as e:
+            logger.warning(f"Failed to read state file: {e}. Falling back to full indexing.")
+    return "1970-01-01T00:00:00"
+
+def update_last_indexed_timestamp(timestamp: str):
+    """Save the latest publish_timestamp to the local state tracker."""
+    STATE_FILE_PATH.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        with open(STATE_FILE_PATH, 'w') as f:
+            json.dump({"last_indexed_timestamp": timestamp}, f, indent=2)
+        logger.info(f"Updated incremental state tracker with timestamp: {timestamp}")
+    except Exception as e:
+        logger.error(f"Failed to save state file: {e}")
 
 def run_indexing(engine: str = 'sentence-transformers'):
     logger.info(f"Starting Vector Indexing Job using {engine}...")
@@ -28,34 +53,44 @@ def run_indexing(engine: str = 'sentence-transformers'):
     logger.info(f"Connecting to Qdrant at {QDRANT_URL}...")
     qdrant = QdrantClient(url=QDRANT_URL)
     
-    # 2. Recreate Collection (Full Batch Processing)
-    logger.info(f"Recreating collection '{COLLECTION_NAME}' (Full Batch Mode)...")
-    if qdrant.collection_exists(COLLECTION_NAME):
-        qdrant.delete_collection(COLLECTION_NAME)
-        
-    qdrant.create_collection(
-        collection_name=COLLECTION_NAME,
-        vectors_config=VectorParams(size=EMBEDDING_DIMENSIONS, distance=Distance.COSINE),
-    )
+    # 2. Check and Create/Maintain Collection
+    collection_exists = qdrant.collection_exists(COLLECTION_NAME)
     
-    # 3. Load Embedder
-    logger.info("Loading Embedding Model...")
-    embedder = EmbedderFactory.get_embedder(engine=engine, device='cuda')
-    logger.info(f"Embedding model loaded on active device: {embedder.device}")
+    if not collection_exists:
+        logger.info(f"Collection '{COLLECTION_NAME}' not found. Creating a fresh collection...")
+        qdrant.create_collection(
+            collection_name=COLLECTION_NAME,
+            vectors_config=VectorParams(size=EMBEDDING_DIMENSIONS, distance=Distance.COSINE),
+        )
+        # If the collection doesn't exist (e.g. wiped Qdrant), we force a full rebuild
+        last_indexed = "1970-01-01T00:00:00"
+    else:
+        logger.info(f"Collection '{COLLECTION_NAME}' exists. Running in Incremental Mode...")
+        last_indexed = get_last_indexed_timestamp()
     
-    # 4. Fetch Gold Articles
-    logger.info("Fetching articles from Gold layer...")
+    # 3. Fetch Gold Articles (Incremental)
+    logger.info(f"Fetching articles from Gold layer published after {last_indexed}...")
     path = db.get_gold_path("articles_serving")
-    # Fetch all records (Full Batch Mode)
-    query = f"SELECT article_id, publish_timestamp, source_domain, title, clean_content, extracted_keywords FROM read_parquet('{path}')"
+    
+    # Fetch only newer records
+    query = f"""
+        SELECT article_id, publish_timestamp, source_domain, title, clean_content, extracted_keywords 
+        FROM read_parquet('{path}')
+        WHERE CAST(publish_timestamp AS VARCHAR) > '{last_indexed}'
+    """
     articles = db.query(query)
     
     total_articles = len(articles)
     logger.info(f"Found {total_articles} articles to index.")
     
     if total_articles == 0:
-        logger.info("No articles to process. Exiting.")
+        logger.info("No new articles to process. Exiting.")
         return
+
+    # 4. Load Embedder (Only if there are new articles to process!)
+    logger.info("Loading Embedding Model...")
+    embedder = EmbedderFactory.get_embedder(engine=engine, device='cuda')
+    logger.info(f"Embedding model loaded on active device: {embedder.device}")
 
     # 5. Process and Upsert in Batches
     for i in range(0, total_articles, BATCH_SIZE):
@@ -90,7 +125,12 @@ def run_indexing(engine: str = 'sentence-transformers'):
             collection_name=COLLECTION_NAME,
             points=points
         )
-        
+    
+    # 6. Save State (Update last_indexed_timestamp)
+    # Find the maximum timestamp in the indexed articles to save as state
+    max_timestamp = max(str(row['publish_timestamp']) for row in articles)
+    update_last_indexed_timestamp(max_timestamp)
+    
     logger.info("Vector Indexing Job Completed Successfully!")
 
 if __name__ == "__main__":

@@ -54,9 +54,15 @@ class FastEmbedEmbedder(BaseEmbedder):
 class EmbedderFactory:
     @staticmethod
     def get_embedder(engine: str = 'sentence-transformers', **kwargs) -> BaseEmbedder:
+        from src.common import config
+        
+        # Get model_name from kwargs, falling back to .env configuration
+        model_name = kwargs.pop('model_name', None) or config.VECTOR_EMBEDDING_MODEL
+        
         if engine == 'sentence-transformers':
-            return SentenceTransformerEmbedder(**kwargs)
+            return SentenceTransformerEmbedder(model_name=model_name, **kwargs)
         elif engine == 'fastembed':
-            return FastEmbedEmbedder(**kwargs)
+            # FastEmbed models sometimes need matching the format expected by the fastembed library
+            return FastEmbedEmbedder(model_name=model_name, **kwargs)
         else:
             raise ValueError(f"Unknown embedding engine: {engine}")
