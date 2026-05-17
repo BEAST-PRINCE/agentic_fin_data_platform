@@ -41,6 +41,7 @@ def run_indexing(engine: str = 'sentence-transformers'):
     # 3. Load Embedder
     logger.info("Loading Embedding Model...")
     embedder = EmbedderFactory.get_embedder(engine=engine, device='cuda')
+    logger.info(f"Embedding model loaded on active device: {embedder.device}")
     
     # 4. Fetch Gold Articles
     logger.info("Fetching articles from Gold layer...")

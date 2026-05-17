@@ -7,6 +7,11 @@ class BaseEmbedder(abc.ABC):
     def embed(self, texts: List[str]) -> List[List[float]]:
         pass
 
+    @property
+    @abc.abstractmethod
+    def device(self) -> str:
+        pass
+
 class SentenceTransformerEmbedder(BaseEmbedder):
     def __init__(self, model_name: str = 'all-MiniLM-L6-v2', device: str = 'cuda'):
         from sentence_transformers import SentenceTransformer
@@ -25,6 +30,10 @@ class SentenceTransformerEmbedder(BaseEmbedder):
         embeddings = self.model.encode(texts)
         return embeddings.tolist()
 
+    @property
+    def device(self) -> str:
+        return str(self.model.device)
+
 class FastEmbedEmbedder(BaseEmbedder):
     def __init__(self, model_name: str = 'BAAI/bge-small-en-v1.5', **kwargs):
         from fastembed import TextEmbedding
@@ -34,6 +43,13 @@ class FastEmbedEmbedder(BaseEmbedder):
         # fastembed returns an iterator of numpy arrays
         embeddings = list(self.model.embed(texts))
         return [e.tolist() for e in embeddings]
+
+    @property
+    def device(self) -> str:
+        try:
+            return ", ".join(self.model.model.active_providers)
+        except Exception:
+            return "CPU (ONNX)"
 
 class EmbedderFactory:
     @staticmethod
