@@ -58,3 +58,4 @@ VECTOR_EMBEDDING_DIMENSIONS = int(os.getenv("VECTOR_EMBEDDING_DIMENSIONS", "384"
 
 # The model used by the AI Agent (e.g. 'ollama/gemma:2b', 'ollama/llama3.2:3b', etc.)
 AGENT_MODEL = os.getenv("AGENT_MODEL", "ollama/gemma:2b")
+LLM_MODE = os.getenv("LLM_MODE", "local")

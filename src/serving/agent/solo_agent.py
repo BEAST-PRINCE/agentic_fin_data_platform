@@ -64,10 +64,12 @@ async def run_solo_agent():
     mcp_toolset = McpToolset(connection_params=server_params)
     print("Configured MCP Toolset (timeout=150s).")
 
-    # Ensure the model string has the ollama/ prefix required by LiteLLM
     model_name = config.AGENT_MODEL
-    if not model_name.startswith("ollama/"):
-        model_name = f"ollama/{model_name}"
+    
+    if config.LLM_MODE.lower() == "local":
+        # Ensure the model string has the ollama/ prefix required by LiteLLM for local models
+        if not model_name.startswith("ollama/"):
+            model_name = f"ollama/{model_name}"
 
     try:
         agent = Agent(
