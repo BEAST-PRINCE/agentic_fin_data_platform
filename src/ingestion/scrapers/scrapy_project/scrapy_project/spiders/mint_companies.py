@@ -14,7 +14,6 @@ if project_root not in sys.path:
 
 from src.common.logger import get_logger
 
-# Initialize central logger
 logger = get_logger("mint_companies_spider")
 
 

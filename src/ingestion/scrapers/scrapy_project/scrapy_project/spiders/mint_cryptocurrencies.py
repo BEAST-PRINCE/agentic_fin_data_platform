@@ -14,11 +14,10 @@ if project_root not in sys.path:
 
 from src.common.logger import get_logger
 
-# Initialize central logger
 logger = get_logger("mint_cryptocurrencies_spider")
 
 
-class MintCompaniesSpider(CrawlSpider):
+class MintCryptocurrenciesSpider(CrawlSpider):
     name = "mint_cryptocurrencies"
     allowed_domains = ["livemint.com"]
     start_urls = ["https://www.livemint.com/cryptocurrency"]
@@ -90,7 +89,7 @@ class MintCompaniesSpider(CrawlSpider):
                 url=response.url,
                 published_at=None,
                 author=None,
-                category="companies",
+                category="cryptocurrency",
                 ingested_at=datetime.now(timezone.utc).isoformat(),
                 tags=[],
             )
@@ -111,7 +110,7 @@ class MintCompaniesSpider(CrawlSpider):
                 if isinstance(article_data.get("author"), dict)
                 else article_data.get("author")
             ),
-            category="companies",
+            category="cryptocurrency",
             ingested_at=datetime.now(timezone.utc).isoformat(),
             tags=article_data.get("keywords", []),
         )

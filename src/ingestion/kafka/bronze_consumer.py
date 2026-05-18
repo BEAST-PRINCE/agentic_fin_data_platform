@@ -1,102 +1,187 @@
-import os
 import json
-import logging
-import boto3
-import time
-from datetime import datetime
-from kafka import KafkaConsumer
-from botocore.exceptions import NoCredentialsError
-
-logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(message)s')
-logger = logging.getLogger(__name__)
-
 import sys
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..')))
+import os
+from datetime import datetime, timezone
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..")))
+
+import boto3
+from kafka import KafkaConsumer, KafkaProducer
+
 from src.common import config
+from src.common.logger import get_logger
+from src.ingestion.kafka.schema import build_bronze_s3_key, sanitize_source_partition
 
-KAFKA_BROKER = os.getenv("KAFKA_BROKER", "localhost:9092")
-TOPIC_NAME = os.getenv("KAFKA_RAW_TOPIC", "raw_financial_news")
+logger = get_logger(__name__)
 
-MINIO_ENDPOINT = f"http://{config.MINIO_ENDPOINT}" if not config.MINIO_SECURE else f"https://{config.MINIO_ENDPOINT}"
-MINIO_ACCESS_KEY = config.MINIO_ACCESS_KEY
-MINIO_SECRET_KEY = config.MINIO_SECRET_KEY
-BRONZE_BUCKET = config.MINIO_BRONZE_BUCKET
+MINIO_ENDPOINT = (
+    f"http://{config.MINIO_ENDPOINT}"
+    if not config.MINIO_SECURE
+    else f"https://{config.MINIO_ENDPOINT}"
+)
+
+
+def _safe_deserialize(raw: bytes):
+    """Deserialize JSON; return a sentinel dict on failure for DLQ routing."""
+    try:
+        return json.loads(raw.decode("utf-8"))
+    except (json.JSONDecodeError, UnicodeDecodeError) as e:
+        return {
+            "__invalid_message__": True,
+            "__error__": str(e),
+            "__raw_preview__": raw[:2000].decode("utf-8", errors="replace"),
+        }
+
 
 class BronzeConsumer:
     def __init__(self):
+        self.consumer = None
+        self.dlq_producer = None
+
         try:
             self.consumer = KafkaConsumer(
-                TOPIC_NAME,
-                bootstrap_servers=[KAFKA_BROKER],
-                auto_offset_reset='earliest',
-                enable_auto_commit=True,
-                group_id='bronze-ingestion-group',
-                value_deserializer=lambda x: json.loads(x.decode('utf-8'))
+                config.KAFKA_TOPIC,
+                bootstrap_servers=config.KAFKA_BOOTSTRAP_SERVERS,
+                auto_offset_reset="earliest",
+                enable_auto_commit=False,
+                group_id=config.KAFKA_BRONZE_CONSUMER_GROUP,
+                value_deserializer=_safe_deserialize,
             )
-            logger.info(f"Connected to Kafka broker at {KAFKA_BROKER}")
+            logger.info(
+                f"Kafka consumer connected: topic={config.KAFKA_TOPIC}, "
+                f"group={config.KAFKA_BRONZE_CONSUMER_GROUP}"
+            )
         except Exception as e:
-            logger.error(f"Failed to connect to Kafka: {e}")
-            self.consumer = None
+            logger.error(f"Failed to connect Kafka consumer: {e}")
+
+        if config.KAFKA_DLQ_ENABLED:
+            try:
+                self.dlq_producer = KafkaProducer(
+                    bootstrap_servers=config.KAFKA_BOOTSTRAP_SERVERS,
+                    value_serializer=lambda v: json.dumps(v).encode("utf-8"),
+                )
+                logger.info(f"DLQ producer ready (topic={config.KAFKA_DLQ_TOPIC})")
+            except Exception as e:
+                logger.error(f"Failed to initialize DLQ producer: {e}")
 
         self.s3_client = boto3.client(
-            's3',
+            "s3",
             endpoint_url=MINIO_ENDPOINT,
-            aws_access_key_id=MINIO_ACCESS_KEY,
-            aws_secret_access_key=MINIO_SECRET_KEY,
-            region_name='us-east-1' # Default for MinIO
+            aws_access_key_id=config.MINIO_ACCESS_KEY,
+            aws_secret_access_key=config.MINIO_SECRET_KEY,
+            region_name="us-east-1",
         )
         self._ensure_bucket()
 
     def _ensure_bucket(self):
         try:
-            self.s3_client.head_bucket(Bucket=BRONZE_BUCKET)
-        except Exception as e:
-            logger.info(f"Bucket {BRONZE_BUCKET} not found. Creating it...")
+            self.s3_client.head_bucket(Bucket=config.MINIO_BRONZE_BUCKET)
+        except Exception:
+            logger.info(f"Bucket {config.MINIO_BRONZE_BUCKET} not found. Creating it...")
             try:
-                self.s3_client.create_bucket(Bucket=BRONZE_BUCKET)
-                logger.info(f"Bucket {BRONZE_BUCKET} created.")
-            except Exception as e2:
-                logger.error(f"Could not create bucket {BRONZE_BUCKET}: {e2}")
+                self.s3_client.create_bucket(Bucket=config.MINIO_BRONZE_BUCKET)
+                logger.info(f"Bucket {config.MINIO_BRONZE_BUCKET} created.")
+            except Exception as e:
+                logger.error(f"Could not create bucket {config.MINIO_BRONZE_BUCKET}: {e}")
 
-    def generate_s3_key(self, source, article_id):
-        # Format: raw_news/source/year=YYYY/month=MM/day=DD/article_id.json
-        now = datetime.utcnow()
-        safe_source = source.replace(" ", "_").lower() if source else "unknown"
-        year = now.strftime("%Y")
-        month = now.strftime("%m")
-        day = now.strftime("%d")
-        
-        key = f"raw_news/{safe_source}/year={year}/month={month}/day={day}/{article_id}.json"
-        return key
+    def _send_to_dlq(self, reason: str, payload: dict, original_message=None):
+        if not config.KAFKA_DLQ_ENABLED or not self.dlq_producer:
+            logger.warning(f"DLQ disabled or unavailable; dropping message: {reason}")
+            return
+
+        envelope = {
+            "dlq_reason": reason,
+            "dlq_timestamp": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+            "original_topic": config.KAFKA_TOPIC,
+            "payload": payload,
+        }
+        if original_message is not None:
+            envelope["kafka_partition"] = original_message.partition
+            envelope["kafka_offset"] = original_message.offset
+
+        try:
+            future = self.dlq_producer.send(config.KAFKA_DLQ_TOPIC, value=envelope)
+            future.get(timeout=10)
+            logger.info(f"Sent message to DLQ ({config.KAFKA_DLQ_TOPIC}): {reason}")
+        except Exception as e:
+            logger.error(f"Failed to send to DLQ: {e}")
+            raise
+
+    def _upload_article(self, article_data: dict) -> str:
+        article_id = article_data.get("article_id")
+        source = article_data.get("source", "unknown")
+        s3_key = build_bronze_s3_key(
+            source=source,
+            article_id=article_id,
+            ingested_at=article_data.get("ingested_at"),
+        )
+        json_bytes = json.dumps(article_data, indent=2).encode("utf-8")
+        self.s3_client.put_object(
+            Bucket=config.MINIO_BRONZE_BUCKET,
+            Key=s3_key,
+            Body=json_bytes,
+            ContentType="application/json",
+        )
+        return s3_key
+
+    def _handle_bad_message(self, reason: str, payload: dict, message) -> bool:
+        """
+        Route bad messages to DLQ and commit offset when DLQ succeeds.
+        Returns True if the offset can be committed.
+        """
+        try:
+            self._send_to_dlq(reason, payload, message)
+            return True
+        except Exception:
+            return False
 
     def start_consuming(self):
         if not self.consumer:
             logger.error("No Kafka consumer configured.")
             return
 
-        logger.info(f"Starting to consume from topic: {TOPIC_NAME}")
+        logger.info(f"Consuming from topic: {config.KAFKA_TOPIC}")
         for message in self.consumer:
             article_data = message.value
-            article_id = article_data.get('article_id')
-            source = article_data.get('source', 'unknown')
-            
-            if not article_id:
-                logger.warning(f"Received message without article_id: {article_data}")
+
+            if article_data.get("__invalid_message__"):
+                if self._handle_bad_message(
+                    "json_deserialize_error",
+                    article_data,
+                    message,
+                ):
+                    self.consumer.commit()
                 continue
-                
-            s3_key = self.generate_s3_key(source, article_id)
-            
+
+            article_id = article_data.get("article_id")
+            if not article_id:
+                if self._handle_bad_message("missing_article_id", article_data, message):
+                    self.consumer.commit()
+                continue
+
+            required = ("title", "content", "source")
+            missing = [f for f in required if not article_data.get(f)]
+            if missing:
+                if self._handle_bad_message(
+                    f"missing_required_fields:{','.join(missing)}",
+                    article_data,
+                    message,
+                ):
+                    self.consumer.commit()
+                continue
+
             try:
-                json_bytes = json.dumps(article_data, indent=2).encode('utf-8')
-                self.s3_client.put_object(
-                    Bucket=BRONZE_BUCKET,
-                    Key=s3_key,
-                    Body=json_bytes,
-                    ContentType='application/json'
+                s3_key = self._upload_article(article_data)
+                self.consumer.commit()
+                logger.info(
+                    f"Saved {article_id} (source={sanitize_source_partition(article_data.get('source'))}) "
+                    f"to s3://{config.MINIO_BRONZE_BUCKET}/{s3_key}"
                 )
-                logger.info(f"Successfully saved {article_id} to s3://{BRONZE_BUCKET}/{s3_key}")
             except Exception as e:
-                logger.error(f"Failed to upload {article_id} to MinIO: {e}")
+                logger.error(
+                    f"Failed to upload {article_id} to MinIO (offset not committed, will retry): {e}"
+                )
+
 
 if __name__ == "__main__":
     consumer = BronzeConsumer()
