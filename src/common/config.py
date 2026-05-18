@@ -19,8 +19,21 @@ load_dotenv(_project_root / ".env")
 # Kafka Configuration
 # =============================================================================
 KAFKA_BOOTSTRAP_SERVERS = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092")
-KAFKA_TOPIC = os.getenv("KAFKA_TOPIC", "raw_news")
-RAW_DATA_PATH = os.getenv("RAW_DATA_PATH", "data/raw_data_source/News Dataset.csv")
+# Unified topic for scraping ingestion (KAFKA_RAW_TOPIC kept as backward-compatible alias)
+KAFKA_TOPIC = os.getenv("KAFKA_TOPIC") or os.getenv("KAFKA_RAW_TOPIC", "raw_financial_news")
+KAFKA_DLQ_TOPIC = os.getenv("KAFKA_DLQ_TOPIC", f"{KAFKA_TOPIC}_dlq")
+KAFKA_DLQ_ENABLED = os.getenv("KAFKA_DLQ_ENABLED", "true").lower() == "true"
+KAFKA_BRONZE_CONSUMER_GROUP = os.getenv("KAFKA_BRONZE_CONSUMER_GROUP", "bronze-ingestion-group")
+
+# Comma-separated bronze source= partition values for incremental silver (empty = all sources)
+SILVER_BRONZE_SOURCES = os.getenv("SILVER_BRONZE_SOURCES", "")
+
+
+def get_silver_bronze_sources() -> list[str]:
+    """Parse SILVER_BRONZE_SOURCES into partition-safe source names."""
+    if not SILVER_BRONZE_SOURCES.strip():
+        return []
+    return [s.strip().lower().replace(" ", "_") for s in SILVER_BRONZE_SOURCES.split(",") if s.strip()]
 
 # =============================================================================
 # MinIO Configuration
