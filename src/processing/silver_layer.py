@@ -51,7 +51,7 @@ def _bronze_read_paths(sources: Optional[List[str]] = None) -> List[str]:
 
 def _read_bronze_json(spark: SparkSession, paths: List[str]) -> DataFrame:
     frames = [
-        spark.read.option("recursiveFileLookup", "true").json(path)
+        spark.read.option("recursiveFileLookup", "true").option("multiLine", "true").json(path)
         for path in paths
     ]
     if len(frames) == 1:
