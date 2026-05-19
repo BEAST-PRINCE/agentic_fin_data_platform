@@ -1,4 +1,10 @@
 # pyrefly: ignore [missing-import]
+import os
+import sys
+
+# Ensure project root is in the path
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))
+
 from fastapi import FastAPI, HTTPException, Query
 from typing import Optional, List, Dict, Any
 
@@ -14,6 +20,14 @@ app = FastAPI(
 async def health_check():
     """Simple health check endpoint."""
     return {"status": "ok", "service": "agentic_datalake_api"}
+
+@app.get("/api/system/statistics", response_model=Dict[str, Any])
+async def get_system_statistics():
+    """Retrieve datalake statistics for the dashboard."""
+    try:
+        return retrieval.fetch_system_statistics()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/articles", response_model=List[Dict[str, Any]])
 async def get_recent_articles(

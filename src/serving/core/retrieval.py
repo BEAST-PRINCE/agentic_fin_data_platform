@@ -106,3 +106,39 @@ def fetch_top_entities(publish_date: str, limit: int = 10) -> List[Dict[str, Any
         LIMIT {limit}
     """
     return db.query(query)
+
+
+def fetch_system_statistics() -> Dict[str, Any]:
+    """Retrieve dynamic file and record counts across the Bronze, Silver, and Gold layers."""
+    stats = {
+        "bronze": {"raw_messages": 0},
+        "silver": {"cleaned_articles": 0},
+        "gold": {"serving_articles": 0}
+    }
+    
+    try:
+        # Bronze JSON Count
+        query = "SELECT count(*) as total FROM read_json_auto('s3://bronze/raw_news/**/*.json')"
+        res = db.query(query)
+        stats["bronze"]["raw_messages"] = res[0]["total"] if res else 0
+    except Exception as e:
+        logger.warning(f"Failed to fetch bronze stats: {e}")
+
+    try:
+        # Silver Parquet Count
+        query = "SELECT count(*) as total FROM read_parquet('s3://silver/cleaned_news/**/*.parquet')"
+        res = db.query(query)
+        stats["silver"]["cleaned_articles"] = res[0]["total"] if res else 0
+    except Exception as e:
+        logger.warning(f"Failed to fetch silver stats: {e}")
+        
+    try:
+        # Gold Parquet Count
+        gold_path = db.get_gold_path("articles_serving")
+        query = f"SELECT count(*) as total FROM read_parquet('{gold_path}')"
+        res = db.query(query)
+        stats["gold"]["serving_articles"] = res[0]["total"] if res else 0
+    except Exception as e:
+        logger.warning(f"Failed to fetch gold stats: {e}")
+        
+    return stats
