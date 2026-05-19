@@ -1,12 +1,6 @@
 import { useEffect, useState } from 'react';
 import { TrendingUp, BarChart3 } from 'lucide-react';
 
-interface Trend {
-  publish_date: string;
-  source_domain: string;
-  category: string;
-  total_articles: number;
-}
 
 interface AggregatedTrend {
   source_domain: string;
@@ -18,21 +12,14 @@ export function TrendingRadar() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch(`/trending?start_date=2020-01-01&end_date=2030-01-01`)
+    fetch('/api/domain-throughput')
       .then(res => res.json())
       .then(data => {
-        // Aggregate totals per source domain
-        const domainMap: { [key: string]: number } = {};
-        data.forEach((item: Trend) => {
-          if (item.source_domain) {
-            domainMap[item.source_domain] = (domainMap[item.source_domain] || 0) + item.total_articles;
-          }
-        });
-        
-        const aggregated = Object.entries(domainMap)
+        // data is a simple object: { "www.moneycontrol.com": 135, "www.livemint.com": 388 }
+        const aggregated = Object.entries(data)
           .map(([source_domain, total_articles]) => ({
             source_domain,
-            total_articles
+            total_articles: total_articles as number
           }))
           .sort((a, b) => b.total_articles - a.total_articles);
 

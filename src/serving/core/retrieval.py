@@ -142,3 +142,17 @@ def fetch_system_statistics() -> Dict[str, Any]:
         logger.warning(f"Failed to fetch gold stats: {e}")
         
     return stats
+
+
+def fetch_domain_throughput() -> Dict[str, Any]:
+    """Retrieve the real-time domain throughput counts directly from the JSON tracker in MinIO."""
+    try:
+        query = "SELECT * FROM read_json_auto('s3://bronze/domain_throughput.json')"
+        res = db.query(query)
+        if res:
+            return res[0]
+        return {}
+    except Exception as e:
+        logger.warning(f"Failed to fetch domain throughput: {e}")
+        return {}
+

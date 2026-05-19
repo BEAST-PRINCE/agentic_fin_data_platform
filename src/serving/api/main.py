@@ -29,6 +29,14 @@ async def get_system_statistics():
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.get("/api/domain-throughput", response_model=Dict[str, Any])
+async def get_domain_throughput():
+    """Retrieve the real-time domain throughput counts from MinIO."""
+    try:
+        return retrieval.fetch_domain_throughput()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.get("/articles", response_model=List[Dict[str, Any]])
 async def get_recent_articles(
     limit: int = Query(10, ge=1, le=100),
