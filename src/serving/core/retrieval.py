@@ -31,9 +31,16 @@ def _get_qdrant():
 
 
 def fetch_article_by_id(article_id: str) -> Optional[Dict[str, Any]]:
-    """Fetch a specific article's full content and metadata by ID."""
-    path = db.get_gold_path("articles_serving")
-    query = f"SELECT * FROM read_parquet('{path}') WHERE article_id = '{article_id}'"
+    """Fetch a specific article's full content and metadata by ID from the Silver layer."""
+    db_id = article_id.replace('-', '')
+    query = f"""
+        SELECT 
+            *, 
+            published_at as publish_timestamp, 
+            regexp_extract(url, 'https?://([^/]+)', 1) as source_domain 
+        FROM read_parquet('s3://silver/cleaned_news/**/*.parquet') 
+        WHERE article_id = '{db_id}'
+    """
     results = db.query(query)
     return results[0] if results else None
 

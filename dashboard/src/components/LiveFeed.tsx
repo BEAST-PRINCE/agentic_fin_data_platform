@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Activity, Clock } from 'lucide-react';
 
 interface Article {
@@ -57,9 +58,14 @@ export function LiveFeed() {
                 <span className="px-2 py-0.5 bg-gray-800 rounded text-gray-300">{article.source_domain}</span>
                 <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {new Date(article.publish_timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
               </div>
-              <h3 className="text-sm font-medium text-gray-200 line-clamp-2 leading-snug">
+              <Link 
+                to={`/article/${article.article_id}`} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-sm font-medium text-gray-200 line-clamp-2 leading-snug hover:text-blue-400 hover:underline transition-colors block cursor-pointer"
+              >
                 {article.title}
-              </h3>
+              </Link>
             </div>
           ))}
         </div>

@@ -4,8 +4,10 @@ import { LiveFeed } from './components/LiveFeed';
 import { TrendingRadar } from './components/TrendingRadar';
 import { ScraperSidebar } from './components/ScraperSidebar';
 import { Database } from 'lucide-react';
+import { Routes, Route } from 'react-router-dom';
+import { ArticleView } from './components/ArticleView';
 
-function App() {
+function DashboardLayout() {
   return (
     <div className="min-h-screen bg-gray-950 text-gray-100 flex overflow-hidden">
       {/* Sidebar Placeholder for Phase 9 */}
@@ -62,6 +64,15 @@ function App() {
         </div>
       </main>
     </div>
+  );
+}
+
+function App() {
+  return (
+    <Routes>
+      <Route path="/" element={<DashboardLayout />} />
+      <Route path="/article/:articleId" element={<ArticleView />} />
+    </Routes>
   );
 }
 

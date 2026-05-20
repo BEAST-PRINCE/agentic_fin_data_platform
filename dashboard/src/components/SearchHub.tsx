@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Search, Loader2, Sparkles, ExternalLink } from 'lucide-react';
 
 interface SearchResult {
@@ -72,9 +73,14 @@ export function SearchHub() {
           results.map((hit, idx) => (
             <div key={idx} className="p-4 bg-gray-900/40 rounded-lg border border-gray-700/50 hover:border-blue-500/30 transition-all group">
               <div className="flex justify-between items-start mb-2">
-                <h3 className="font-semibold text-gray-200 group-hover:text-blue-400 transition-colors leading-tight">
+                <Link 
+                  to={`/article/${hit.article_id}`} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="font-semibold text-gray-200 hover:text-blue-400 hover:underline transition-all leading-tight cursor-pointer"
+                >
                   {hit.title}
-                </h3>
+                </Link>
                 <span className="text-xs font-mono px-2 py-1 bg-blue-500/10 text-blue-400 rounded-full border border-blue-500/20 whitespace-nowrap ml-4">
                   {(hit.score * 100).toFixed(1)}% Match
                 </span>
