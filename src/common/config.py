@@ -59,3 +59,12 @@ VECTOR_EMBEDDING_DIMENSIONS = int(os.getenv("VECTOR_EMBEDDING_DIMENSIONS", "384"
 # The model used by the AI Agent (e.g. 'ollama/gemma:2b', 'ollama/llama3.2:3b', etc.)
 AGENT_MODEL = os.getenv("AGENT_MODEL", "ollama/gemma:2b")
 LLM_MODE = os.getenv("LLM_MODE", "local")
+
+# =============================================================================
+# Health Check Configuration
+# =============================================================================
+HEALTH_CHECK_ENABLE_MINIO = os.getenv("HEALTH_CHECK_ENABLE_MINIO", "true").lower() == "true"
+HEALTH_CHECK_ENABLE_KAFKA = os.getenv("HEALTH_CHECK_ENABLE_KAFKA", "true").lower() == "true"
+HEALTH_CHECK_ENABLE_QDRANT = os.getenv("HEALTH_CHECK_ENABLE_QDRANT", "true").lower() == "true"
+HEALTH_CHECK_ENABLE_DUCKDB = os.getenv("HEALTH_CHECK_ENABLE_DUCKDB", "true").lower() == "true"
+HEALTH_CHECK_ENABLE_OLLAMA = os.getenv("HEALTH_CHECK_ENABLE_OLLAMA", "true").lower() == "true"

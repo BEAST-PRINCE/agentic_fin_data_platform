@@ -7,19 +7,37 @@ interface Stats {
   gold: { serving_articles: number };
 }
 
+interface ComponentHealth {
+  status: 'online' | 'offline';
+  latency_ms: number | null;
+  error?: string;
+}
+
+interface SystemHealth {
+  minio: ComponentHealth;
+  kafka: ComponentHealth;
+  qdrant: ComponentHealth;
+  duckdb: ComponentHealth;
+  ollama: ComponentHealth;
+}
+
 export function HealthGrid() {
   const [stats, setStats] = useState<Stats | null>(null);
+  const [health, setHealth] = useState<SystemHealth | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch('/api/system/statistics')
-      .then(res => res.json())
-      .then(data => {
-        setStats(data);
+    Promise.all([
+      fetch('/api/system/statistics').then(res => res.json()),
+      fetch('/api/health').then(res => res.json())
+    ])
+      .then(([statsData, healthData]) => {
+        setStats(statsData);
+        setHealth(healthData);
         setLoading(false);
       })
       .catch(err => {
-        console.error("Failed to fetch stats:", err);
+        console.error("Failed to fetch dashboard data:", err);
         setLoading(false);
       });
   }, []);
@@ -65,6 +83,24 @@ export function HealthGrid() {
           <div className="text-xs text-gray-500 mt-1">Serving Articles</div>
         </div>
       </div>
+
+      {/* Infrastructure Health Row */}
+      {health && (
+        <div className="mt-8 pt-6 border-t border-gray-800">
+          <div className="flex flex-wrap gap-4">
+            {Object.entries(health).map(([key, info]) => (
+              <div key={key} className="flex items-center gap-3 bg-gray-900/60 border border-gray-800 rounded-full px-4 py-2">
+                <span className="relative flex h-2.5 w-2.5">
+                  {info.status === 'online' && <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>}
+                  <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ${info.status === 'online' ? 'bg-emerald-500' : 'bg-red-500'}`}></span>
+                </span>
+                <span className="text-sm font-medium text-gray-300 capitalize">{key}</span>
+                {info.latency_ms && <span className="text-xs text-gray-500 font-mono ml-2">{info.latency_ms}ms</span>}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
