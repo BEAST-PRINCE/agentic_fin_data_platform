@@ -10,6 +10,7 @@ from typing import Optional, List, Dict, Any
 from pydantic import BaseModel
 from src.serving.core import retrieval, health
 from src.serving.core.scraper_manager import scraper_manager
+from src.serving.core.pipeline_manager import pipeline_manager
 from src.common.logger import get_logger
 
 logger = get_logger(__name__)
@@ -19,6 +20,14 @@ app = FastAPI(
     description="External API Serving Layer for the Gold Data",
     version="1.0.0"
 )
+
+@app.on_event("startup")
+async def startup_event():
+    """Initialize heavy models on the main thread to avoid PyTorch OpenMP deadlocks in background threads."""
+    logger.info("Initializing semantic search embedding model on startup...")
+    # This forces the lazy singleton to load in the main thread
+    retrieval._get_embedder()
+    logger.info("Embedding model initialized.")
 
 @app.get("/health")
 async def health_check():
@@ -77,6 +86,34 @@ async def get_scraper_logs(name: str):
     """Get the real-time tail of the scraper logs."""
     return {"logs": scraper_manager.get_logs(name)}
 
+# --- Data Pipeline Endpoints ---
+
+@app.get("/api/pipeline/status")
+async def get_pipeline_status():
+    """Get the active status of the data pipeline."""
+    return pipeline_manager.get_status()
+
+@app.post("/api/pipeline/run/{stage}")
+async def run_pipeline_stage(stage: str):
+    """Run a specific pipeline stage (silver, gold, indexer)."""
+    res = pipeline_manager.run_stage(stage)
+    if res.get("status") == "error":
+        raise HTTPException(status_code=400, detail=res.get("message"))
+    return res
+
+@app.post("/api/pipeline/stop")
+async def stop_pipeline():
+    """Stop the currently running pipeline stage."""
+    res = pipeline_manager.stop_pipeline()
+    if res.get("status") == "error":
+        raise HTTPException(status_code=400, detail=res.get("message"))
+    return res
+
+@app.get("/api/pipeline/logs")
+async def get_pipeline_logs():
+    """Get the live logs of the running pipeline stage."""
+    return {"logs": pipeline_manager.get_logs()}
+
 @app.get("/articles", response_model=List[Dict[str, Any]])
 async def get_recent_articles(
     limit: int = Query(10, ge=1, le=100),
@@ -102,7 +139,7 @@ async def get_article_by_id(article_id: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/search", response_model=List[Dict[str, Any]])
-async def semantic_search_articles(
+def semantic_search_articles(
     query: str = Query(..., min_length=3),
     limit: int = Query(10, ge=1, le=50)
 ):

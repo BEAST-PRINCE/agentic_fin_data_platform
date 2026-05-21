@@ -7,33 +7,42 @@ interface ScraperStatus {
   pid: number | null;
 }
 
+interface PipelineStatus {
+  active_stage: string;
+  status: string;
+}
+
 export function ScraperSidebar() {
   const [scrapers, setScrapers] = useState<ScraperStatus[]>([]);
+  const [pipeline, setPipeline] = useState<PipelineStatus>({ active_stage: 'idle', status: 'Idle' });
   const [loading, setLoading] = useState(true);
-  const [selectedLogs, setSelectedLogs] = useState<string | null>(null);
+  const [selectedLogs, setSelectedLogs] = useState<{type: 'scraper' | 'pipeline', name: string} | null>(null);
   const [logs, setLogs] = useState<string[]>([]);
   const [polling, setPolling] = useState(false);
 
-  const fetchScrapers = () => {
-    fetch('/api/scrapers')
-      .then(res => res.json())
-      .then(data => {
-        setScrapers(data);
+  const fetchStatuses = () => {
+    Promise.all([
+      fetch('/api/scrapers').then(res => res.json()),
+      fetch('/api/pipeline/status').then(res => res.json())
+    ])
+      .then(([scrapersData, pipelineData]) => {
+        setScrapers(scrapersData);
+        setPipeline(pipelineData);
         setLoading(false);
       })
       .catch(err => {
-        console.error("Failed to fetch scrapers:", err);
+        console.error("Failed to fetch operations status:", err);
         setLoading(false);
       });
   };
 
   useEffect(() => {
-    fetchScrapers();
-    const interval = setInterval(fetchScrapers, 5000); // Poll status every 5s
+    fetchStatuses();
+    const interval = setInterval(fetchStatuses, 3000);
     return () => clearInterval(interval);
   }, []);
 
-  // Poll logs for selected scraper
+  // Poll logs
   useEffect(() => {
     if (!selectedLogs) {
       setPolling(false);
@@ -41,7 +50,11 @@ export function ScraperSidebar() {
     }
 
     const fetchLogs = () => {
-      fetch(`/api/scrapers/${selectedLogs}/logs`)
+      const endpoint = selectedLogs.type === 'scraper' 
+        ? `/api/scrapers/${selectedLogs.name}/logs`
+        : `/api/pipeline/logs`;
+        
+      fetch(endpoint)
         .then(res => res.json())
         .then(data => {
           if (data.logs) {
@@ -59,36 +72,55 @@ export function ScraperSidebar() {
   const startScraper = async (name: string) => {
     try {
       await fetch(`/api/scrapers/${name}/start`, { method: 'POST' });
-      fetchScrapers();
-    } catch (e) {
-      console.error(e);
-    }
+      fetchStatuses();
+    } catch (e) { console.error(e); }
   };
 
   const stopScraper = async (name: string) => {
     try {
       await fetch(`/api/scrapers/${name}/stop`, { method: 'POST' });
-      fetchScrapers();
-    } catch (e) {
-      console.error(e);
-    }
+      fetchStatuses();
+    } catch (e) { console.error(e); }
   };
+  
+  const startPipeline = async (stage: string) => {
+    try {
+      await fetch(`/api/pipeline/run/${stage}`, { method: 'POST' });
+      fetchStatuses();
+    } catch (e) { console.error(e); }
+  };
+  
+  const stopPipeline = async () => {
+    try {
+      await fetch(`/api/pipeline/stop`, { method: 'POST' });
+      fetchStatuses();
+    } catch (e) { console.error(e); }
+  };
+
+  const pipelineStages = [
+    { id: 'silver', label: 'Silver Layer (Clean)' },
+    { id: 'gold', label: 'Gold Layer (ML/Agg)' },
+    { id: 'indexer', label: 'Vector Indexer' }
+  ];
 
   return (
     <>
-      <aside className="w-80 bg-gray-950 border-r border-gray-800/60 p-6 hidden lg:flex flex-col relative overflow-y-auto">
+      <aside className="w-72 bg-black border-r border-gray-800 flex flex-col p-4 shadow-xl z-10 relative">
         <div className="flex items-center gap-3 mb-8">
-          <div className="p-2 bg-indigo-500/20 rounded-lg">
+          <div className="p-2 bg-indigo-500/10 rounded-lg">
             <Bug className="w-6 h-6 text-indigo-400" />
           </div>
           <div>
-            <h2 className="font-semibold text-gray-200">Scraper Ops</h2>
+            <h2 className="font-semibold text-gray-200">Ops Center</h2>
             <p className="text-xs text-gray-500">Live Mission Control</p>
           </div>
         </div>
 
-        <div className="space-y-4 flex-1">
-          {loading ? (
+        <div className="space-y-6 flex-1">
+          {/* Scrapers Section */}
+          <div className="space-y-3">
+            <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Web Scrapers</h3>
+            {loading ? (
             <div className="animate-pulse space-y-4">
               <div className="h-24 bg-gray-900 rounded-lg"></div>
               <div className="h-24 bg-gray-900 rounded-lg"></div>
@@ -118,9 +150,13 @@ export function ScraperSidebar() {
                       {isRunning ? <Square className="w-4 h-4" /> : <Play className="w-4 h-4" />}
                     </button>
                     <button 
-                      onClick={() => setSelectedLogs(selectedLogs === scraper.name ? null : scraper.name)}
+                      onClick={() => setSelectedLogs(
+                        selectedLogs?.type === 'scraper' && selectedLogs.name === scraper.name 
+                          ? null 
+                          : {type: 'scraper', name: scraper.name}
+                      )}
                       className={`flex-1 py-1.5 rounded flex items-center justify-center transition-colors ${
-                        selectedLogs === scraper.name ? 'bg-indigo-500 text-white' : 'bg-gray-800 hover:bg-gray-700 text-gray-400'
+                        selectedLogs?.type === 'scraper' && selectedLogs.name === scraper.name ? 'bg-indigo-500 text-white' : 'bg-gray-800 hover:bg-gray-700 text-gray-400'
                       }`}
                       title="View Logs"
                     >
@@ -131,6 +167,57 @@ export function ScraperSidebar() {
               );
             })
           )}
+          </div>
+          
+          {/* Pipeline Section */}
+          <div className="space-y-3 border-t border-gray-800/60 pt-4">
+            <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Data Pipeline</h3>
+            {pipelineStages.map(stage => {
+              const isRunning = pipeline.active_stage === stage.id;
+              const isDisabled = pipeline.active_stage !== 'idle' && !isRunning;
+              
+              return (
+                <div key={stage.id} className={`p-4 rounded-lg border transition-colors ${isRunning ? 'bg-gray-900 border-emerald-500/50' : 'bg-gray-900/50 border-gray-800'} ${isDisabled ? 'opacity-50' : ''}`}>
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-sm font-medium text-gray-300 pr-2">{stage.label}</span>
+                    <span className="relative flex h-2.5 w-2.5 shrink-0">
+                      {isRunning && <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>}
+                      <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ${isRunning ? 'bg-emerald-500' : 'bg-gray-600'}`}></span>
+                    </span>
+                  </div>
+                  <div className="flex gap-2">
+                    <button 
+                      onClick={() => isRunning ? stopPipeline() : startPipeline(stage.id)}
+                      disabled={isDisabled}
+                      className={`flex-1 py-1.5 rounded flex items-center justify-center transition-colors ${
+                        isDisabled ? 'bg-gray-800 text-gray-600 cursor-not-allowed' :
+                        isRunning 
+                          ? 'bg-red-500/10 hover:bg-red-500/20 text-red-400' 
+                          : 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400'
+                      }`}
+                      title={isRunning ? "Stop Stage" : "Run Stage"}
+                    >
+                      {isRunning ? <Square className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+                    </button>
+                    <button 
+                      onClick={() => setSelectedLogs(
+                        selectedLogs?.type === 'pipeline' && selectedLogs.name === stage.id 
+                          ? null 
+                          : {type: 'pipeline', name: stage.id}
+                      )}
+                      className={`flex-1 py-1.5 rounded flex items-center justify-center transition-colors ${
+                        selectedLogs?.type === 'pipeline' && selectedLogs.name === stage.id ? 'bg-emerald-500 text-white' : 'bg-gray-800 hover:bg-gray-700 text-gray-400'
+                      }`}
+                      title="View Logs"
+                    >
+                      <TerminalIcon className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
         </div>
       </aside>
 
@@ -140,7 +227,7 @@ export function ScraperSidebar() {
           <div className="p-4 border-b border-gray-800 flex items-center justify-between bg-gray-900/80">
             <div className="flex items-center gap-2">
               <TerminalIcon className="w-5 h-5 text-indigo-400" />
-              <h3 className="text-gray-200 font-medium font-mono text-sm">{selectedLogs} Logs</h3>
+              <h3 className="text-gray-200 font-medium font-mono text-sm">{selectedLogs.name} Logs</h3>
               {polling && <span className="flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse ml-2"></span>}
             </div>
             <button onClick={() => setSelectedLogs(null)} className="text-gray-400 hover:text-white p-1">

@@ -60,6 +60,9 @@ VECTOR_EMBEDDING_DIMENSIONS = int(os.getenv("VECTOR_EMBEDDING_DIMENSIONS", "384"
 AGENT_MODEL = os.getenv("AGENT_MODEL", "ollama/gemma:2b")
 LLM_MODE = os.getenv("LLM_MODE", "local")
 
+# HuggingFace Auth Token
+HF_TOKEN = os.getenv("HF_TOKEN", "")
+
 # =============================================================================
 # Health Check Configuration
 # =============================================================================

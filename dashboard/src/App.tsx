@@ -9,12 +9,12 @@ import { ArticleView } from './components/ArticleView';
 
 function DashboardLayout() {
   return (
-    <div className="min-h-screen bg-gray-950 text-gray-100 flex overflow-hidden">
+    <div className="min-h-screen bg-gray-950 text-gray-100 flex">
       {/* Sidebar Placeholder for Phase 9 */}
       <ScraperSidebar />
 
       {/* Main Content Area */}
-      <main className="flex-1 flex flex-col h-screen overflow-y-auto p-8 gap-8 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-gray-900 via-gray-950 to-black">
+      <main className="flex-1 flex flex-col min-h-screen p-8 gap-8 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-gray-900 via-gray-950 to-black">
         
         {/* Header */}
         <header className="flex items-center justify-between">

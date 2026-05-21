@@ -33,6 +33,8 @@ class ScraperManager:
         self.flush_threads: Dict[str, threading.Thread] = {}
         self.running_flags: Dict[str, bool] = {}
         
+        self.bronze_consumer_process: subprocess.Popen = None
+        
         self.minio_client = MinIOClient()
         self._ensure_bucket_and_ttl()
 
@@ -85,6 +87,15 @@ class ScraperManager:
             
         logger.info(f"Starting scraper: {name} in {SCRAPY_DIR}")
         
+        # Ensure bronze consumer is running
+        if self.bronze_consumer_process is None or self.bronze_consumer_process.poll() is not None:
+            logger.info("Starting bronze consumer for data ingestion...")
+            bronze_consumer_path = os.path.join(
+                os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+                "ingestion", "kafka", "bronze_consumer.py"
+            )
+            self.bronze_consumer_process = subprocess.Popen([sys.executable, bronze_consumer_path])
+        
         # Run process and pipe output using the current python executable (venv)
         try:
             p = subprocess.Popen(
@@ -97,7 +108,7 @@ class ScraperManager:
             )
             
             self.active_processes[name] = p
-            self.log_buffers[name] = []
+            self.log_buffers[name] = ["Scraper is running..."]
             self.log_queues[name] = queue.Queue()
             self.running_flags[name] = True
             
@@ -123,22 +134,51 @@ class ScraperManager:
         
         # Stop background thread gracefully
         self.running_flags[name] = False
+        
+        # If no other scrapers are running, stop the bronze consumer
+        running_count = sum(1 for p in self.active_processes.values() if p and p.poll() is None)
+        if running_count == 0 and self.bronze_consumer_process:
+            logger.info("No active scrapers remaining. Stopping bronze consumer...")
+            self.bronze_consumer_process.terminate()
+            self.bronze_consumer_process = None
+            
         return {"status": "success", "message": f"Stopped {name}"}
 
     def _read_output(self, name: str, stdout):
-        """Read lines from stdout and push to queue and buffer."""
+        """Read lines from stdout and push to queue (MinIO) and selectively to buffer (Frontend)."""
+        capturing_stats = False
+        stats_buffer = []
+        
         for line in iter(stdout.readline, ''):
             clean_line = line.strip()
             if clean_line:
+                # Always send to MinIO queue
                 self.log_queues[name].put(clean_line)
                 
-                # Keep last 100 lines in memory for immediate frontend access
-                self.log_buffers[name].append(clean_line)
-                if len(self.log_buffers[name]) > 100:
-                    self.log_buffers[name].pop(0)
-                    
+                # Smart filtering for Frontend
+                if "Dumping Scrapy stats:" in clean_line:
+                    capturing_stats = True
+                    stats_buffer.append("--- Scrapy Execution Stats ---")
+                elif capturing_stats:
+                    if clean_line.startswith("20") and "[scrapy" in clean_line:
+                        # Reached the end of the stats dictionary (which is usually followed by another log line like "Spider closed")
+                        capturing_stats = False
+                        # Update frontend buffer to show ONLY stats
+                        self.log_buffers[name] = stats_buffer.copy()
+                    else:
+                        stats_buffer.append(clean_line)
+                        # Show live stats buildup
+                        self.log_buffers[name] = stats_buffer.copy()
+                        
         stdout.close()
         self.running_flags[name] = False
+        
+        # Check if the process exited with an error or without stats
+        p = self.active_processes.get(name)
+        if p and p.poll() != 0 and len(stats_buffer) == 0:
+            self.log_buffers[name].append("--- Scraper Error ---")
+            self.log_buffers[name].append("The scraper crashed or exited unexpectedly.")
+            self.log_buffers[name].append("Please check the 'scraper-logs' in MinIO or your backend terminal for the full stacktrace.")
 
     def _flush_logs_to_minio(self, name: str):
         """Flush logs to MinIO every 25 seconds."""
