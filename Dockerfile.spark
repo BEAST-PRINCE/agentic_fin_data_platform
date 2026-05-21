@@ -1,0 +1,9 @@
+FROM apache/spark-py:v3.4.0
+
+USER root
+
+# Install required Python dependencies for the pipeline
+RUN pip install --no-cache-dir python-dotenv minio numpy boto3
+
+# Switch back to default user if needed (Spark usually runs as a specific user or root depending on setup)
+# In our docker-compose we specify user: root, so we can leave it as root here.

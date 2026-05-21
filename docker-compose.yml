@@ -65,7 +65,10 @@ services:
       - datalake-net
 
   spark-master:
-    image: apache/spark-py:v3.4.0
+    build:
+      context: .
+      dockerfile: Dockerfile.spark
+    image: agentic-spark:latest
     container_name: spark-master
     user: root
     command: /opt/spark/bin/spark-class org.apache.spark.deploy.master.Master
@@ -84,7 +87,10 @@ services:
       - datalake-net
 
   spark-worker:
-    image: apache/spark-py:v3.4.0
+    build:
+      context: .
+      dockerfile: Dockerfile.spark
+    image: agentic-spark:latest
     container_name: spark-worker
     user: root
     command: /opt/spark/bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077
