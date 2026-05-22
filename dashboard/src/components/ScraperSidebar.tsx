@@ -19,6 +19,26 @@ export function ScraperSidebar() {
   const [selectedLogs, setSelectedLogs] = useState<{type: 'scraper' | 'pipeline', name: string} | null>(null);
   const [logs, setLogs] = useState<string[]>([]);
   const [polling, setPolling] = useState(false);
+  const [logWidth, setLogWidth] = useState(600);
+
+  const startResize = (e: React.MouseEvent) => {
+    const startX = e.clientX;
+    const startWidth = logWidth;
+
+    const doDrag = (dragEvent: MouseEvent) => {
+      setLogWidth(Math.max(400, Math.min(window.innerWidth - 300, startWidth + (startX - dragEvent.clientX))));
+    };
+
+    const stopDrag = () => {
+      document.removeEventListener('mousemove', doDrag);
+      document.removeEventListener('mouseup', stopDrag);
+      document.body.style.cursor = 'default';
+    };
+
+    document.body.style.cursor = 'col-resize';
+    document.addEventListener('mousemove', doDrag);
+    document.addEventListener('mouseup', stopDrag);
+  };
 
   const fetchStatuses = () => {
     Promise.all([
@@ -27,7 +47,12 @@ export function ScraperSidebar() {
     ])
       .then(([scrapersData, pipelineData]) => {
         setScrapers(scrapersData);
-        setPipeline(pipelineData);
+        setPipeline(prev => {
+          if (prev.active_stage !== 'idle' && pipelineData.active_stage === 'idle') {
+            window.dispatchEvent(new Event('pipelineCompleted'));
+          }
+          return pipelineData;
+        });
         setLoading(false);
       })
       .catch(err => {
@@ -223,7 +248,15 @@ export function ScraperSidebar() {
 
       {/* Terminal Slide-out Overlay */}
       {selectedLogs && (
-        <div className="fixed top-0 bottom-0 right-0 w-[600px] max-w-full bg-gray-950 border-l border-gray-800 shadow-2xl z-50 flex flex-col transform transition-transform">
+        <div 
+          className="fixed top-0 bottom-0 right-0 max-w-full bg-gray-950 border-l border-gray-800 shadow-2xl z-50 flex flex-col transform transition-transform"
+          style={{ width: `${logWidth}px` }}
+        >
+          {/* Resize Handle */}
+          <div 
+            className="absolute top-0 bottom-0 left-0 w-2 cursor-col-resize hover:bg-indigo-500/50 z-50 -ml-1"
+            onMouseDown={startResize}
+          />
           <div className="p-4 border-b border-gray-800 flex items-center justify-between bg-gray-900/80">
             <div className="flex items-center gap-2">
               <TerminalIcon className="w-5 h-5 text-indigo-400" />
@@ -236,7 +269,9 @@ export function ScraperSidebar() {
           </div>
           <div className="flex-1 overflow-y-auto p-4 bg-[#0d1117]">
             {logs.length === 0 ? (
-              <div className="text-gray-500 italic text-sm font-mono">No logs available for this spider...</div>
+              <div className="text-gray-500 italic text-sm font-mono">
+                {selectedLogs.type === 'pipeline' ? "No logs available for this pipeline stage..." : "No logs available for this spider..."}
+              </div>
             ) : (
               <pre className="text-xs text-green-400 font-mono leading-relaxed break-all whitespace-pre-wrap">
                 {logs.join('\n')}

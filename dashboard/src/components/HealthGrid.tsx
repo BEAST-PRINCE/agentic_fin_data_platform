@@ -27,19 +27,26 @@ export function HealthGrid() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    Promise.all([
-      fetch('/api/system/statistics').then(res => res.json()),
-      fetch('/api/health').then(res => res.json())
-    ])
-      .then(([statsData, healthData]) => {
-        setStats(statsData);
-        setHealth(healthData);
-        setLoading(false);
-      })
-      .catch(err => {
-        console.error("Failed to fetch dashboard data:", err);
-        setLoading(false);
-      });
+    const fetchHealth = () => {
+      Promise.all([
+        fetch('/api/system/statistics').then(res => res.json()),
+        fetch('/api/health').then(res => res.json())
+      ])
+        .then(([statsData, healthData]) => {
+          setStats(statsData);
+          setHealth(healthData);
+          setLoading(false);
+        })
+        .catch(err => {
+          console.error("Failed to fetch dashboard data:", err);
+          setLoading(false);
+        });
+    };
+
+    fetchHealth();
+    
+    window.addEventListener('pipelineCompleted', fetchHealth);
+    return () => window.removeEventListener('pipelineCompleted', fetchHealth);
   }, []);
 
   if (loading) return <div className="glass-panel p-6 animate-pulse h-32"></div>;
