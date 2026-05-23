@@ -37,6 +37,28 @@ class ScraperManager:
         
         self.minio_client = MinIOClient()
         self._ensure_bucket_and_ttl()
+        
+        # Dynamically discover scrapers once on startup
+        self.available_scrapers = self._discover_scrapers()
+
+    def _discover_scrapers(self) -> List[str]:
+        """Dynamically find all available Scrapy spiders."""
+        try:
+            result = subprocess.run(
+                [sys.executable, "-m", "scrapy", "list"],
+                cwd=SCRAPY_DIR,
+                capture_output=True,
+                text=True
+            )
+            if result.returncode == 0:
+                scrapers = [line.strip() for line in result.stdout.splitlines() if line.strip()]
+                logger.info(f"Dynamically discovered scrapers: {scrapers}")
+                return scrapers
+            else:
+                logger.warning(f"Failed to list scrapers, scrapy list returned non-zero: {result.stderr}")
+        except Exception as e:
+            logger.error(f"Error discovering scrapers: {e}")
+        return []
 
     def _ensure_bucket_and_ttl(self):
         """Ensure the log bucket exists and configure 15-day TTL."""
@@ -61,16 +83,8 @@ class ScraperManager:
             logger.warning(f"Could not configure bucket TTL: {e}")
 
     def list_scrapers(self) -> List[Dict[str, Any]]:
-        # Hardcoded for now, could be discovered dynamically
-        scrapers = [
-            "financialexpress_markets",
-            "mint_companies",
-            "mint_cryptocurrencies",
-            "moneycontrol_business"
-        ]
-        
         status_list = []
-        for name in scrapers:
+        for name in self.available_scrapers:
             process = self.active_processes.get(name)
             is_running = process is not None and process.poll() is None
             status_list.append({
