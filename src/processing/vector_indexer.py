@@ -10,6 +10,7 @@ from src.common import config
 from src.common.logger import get_logger
 from src.storage.db_client import db
 from src.processing.embeddings import EmbedderFactory
+from src.storage.minio_client import MinIOClient
 from qdrant_client import QdrantClient
 from qdrant_client.http.models import Distance, VectorParams, PointStruct
 
@@ -18,33 +19,38 @@ from pathlib import Path
 
 logger = get_logger(__name__)
 
+import io
+
 # Config
 QDRANT_URL = "http://localhost:6333"
 COLLECTION_NAME = "articles"
 EMBEDDING_DIMENSIONS = config.VECTOR_EMBEDDING_DIMENSIONS
 BATCH_SIZE = 64
-STATE_FILE_PATH = Path("data/vector_indexer_state.json")
 
 def get_last_indexed_timestamp() -> str:
-    """Retrieve the latest publish_timestamp from the local state tracker."""
-    if STATE_FILE_PATH.exists():
-        try:
-            with open(STATE_FILE_PATH, 'r') as f:
-                state = json.load(f)
-                return state.get("last_indexed_timestamp", "1970-01-01T00:00:00")
-        except Exception as e:
-            logger.warning(f"Failed to read state file: {e}. Falling back to full indexing.")
-    return "1970-01-01T00:00:00"
+    """Retrieve the latest publish_timestamp from the MinIO state tracker."""
+    client = MinIOClient()
+    client.ensure_bucket_exists("system-logs")
+    try:
+        response = client.client.get_object("system-logs", "vector_indexer_state.json")
+        state = json.loads(response.read().decode('utf-8'))
+        response.close()
+        response.release_conn()
+        return state.get("last_indexed_timestamp", "1970-01-01T00:00:00")
+    except Exception as e:
+        logger.warning(f"No previous state found in MinIO or error reading state. Falling back to full indexing.")
+        return "1970-01-01T00:00:00"
 
 def update_last_indexed_timestamp(timestamp: str):
-    """Save the latest publish_timestamp to the local state tracker."""
-    STATE_FILE_PATH.parent.mkdir(parents=True, exist_ok=True)
+    """Save the latest publish_timestamp to the MinIO state tracker."""
+    client = MinIOClient()
+    client.ensure_bucket_exists("system-logs")
     try:
-        with open(STATE_FILE_PATH, 'w') as f:
-            json.dump({"last_indexed_timestamp": timestamp}, f, indent=2)
-        logger.info(f"Updated incremental state tracker with timestamp: {timestamp}")
+        data = json.dumps({"last_indexed_timestamp": timestamp}, indent=2).encode('utf-8')
+        client.upload_stream("system-logs", "vector_indexer_state.json", io.BytesIO(data), len(data))
+        logger.info(f"Updated incremental state tracker in MinIO with timestamp: {timestamp}")
     except Exception as e:
-        logger.error(f"Failed to save state file: {e}")
+        logger.error(f"Failed to save state file to MinIO: {e}")
 
 def run_indexing(engine: str = 'sentence-transformers'):
     logger.info(f"Starting Vector Indexing Job using {engine}...")
@@ -74,11 +80,15 @@ def run_indexing(engine: str = 'sentence-transformers'):
     
     # Fetch only newer records
     query = f"""
-        SELECT article_id, publish_timestamp, source_domain, title, clean_content, extracted_keywords 
+        SELECT article_id, publish_timestamp, source_domain, title, clean_content, source_tags, semantic_keywords 
         FROM read_parquet('{path}')
         WHERE CAST(publish_timestamp AS VARCHAR) > '{last_indexed}'
     """
-    articles = db.query(query)
+    try:
+        articles = db.query(query)
+    except Exception as e:
+        logger.error(f"Failed to query database: {e}")
+        return
     
     total_articles = len(articles)
     logger.info(f"Found {total_articles} articles to index.")
@@ -114,7 +124,8 @@ def run_indexing(engine: str = 'sentence-transformers'):
                         "title": row['title'],
                         "source_domain": row['source_domain'],
                         "publish_timestamp": str(row['publish_timestamp']),
-                        "extracted_keywords": row.get('extracted_keywords', [])
+                        "source_tags": row.get('source_tags', []),
+                        "semantic_keywords": row.get('semantic_keywords', [])
                     }
                 )
             )

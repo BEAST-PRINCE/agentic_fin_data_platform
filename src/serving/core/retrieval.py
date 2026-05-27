@@ -6,6 +6,7 @@ from typing import List, Optional, Dict, Any
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))
 
 from src.storage.db_client import db
+from src.storage.minio_client import MinIOClient
 from src.common import config
 from src.common.logger import get_logger
 
@@ -47,14 +48,21 @@ def fetch_article_by_id(article_id: str) -> Optional[Dict[str, Any]]:
 
 def fetch_recent_articles(limit: int = 10, offset: int = 0) -> List[Dict[str, Any]]:
     """Fetch recent articles."""
-    path = db.get_gold_path("articles_serving")
-    query = f"""
-        SELECT article_id, title, source_domain, publish_timestamp, extracted_keywords 
-        FROM read_parquet('{path}')
-        ORDER BY publish_timestamp DESC
-        LIMIT {limit} OFFSET {offset}
-    """
-    return db.query(query)
+    try:
+        path = db.get_gold_path("articles_serving")
+        query = f"""
+            SELECT article_id, title, source_domain, publish_timestamp, source_tags, semantic_keywords 
+            FROM read_parquet('{path}')
+            ORDER BY publish_timestamp DESC
+            LIMIT {limit} OFFSET {offset}
+        """
+        return db.query(query)
+    except Exception as e:
+        error_msg = str(e)
+        if "No files found" in error_msg or "Timeout was reached" in error_msg:
+            return []
+        logger.error(f"Failed to fetch recent articles: {e}")
+        return []
 
 
 def semantic_search(query_text: str, limit: int = 10) -> List[Dict[str, Any]]:
@@ -79,7 +87,8 @@ def semantic_search(query_text: str, limit: int = 10) -> List[Dict[str, Any]]:
                 "title": hit.payload.get("title"),
                 "source_domain": hit.payload.get("source_domain"),
                 "publish_timestamp": hit.payload.get("publish_timestamp"),
-                "extracted_keywords": hit.payload.get("extracted_keywords", [])
+                "source_tags": hit.payload.get("source_tags", []),
+                "semantic_keywords": hit.payload.get("semantic_keywords", [])
             })
             
         return formatted_results
@@ -90,29 +99,43 @@ def semantic_search(query_text: str, limit: int = 10) -> List[Dict[str, Any]]:
 
 def fetch_daily_trends(start_date: str, end_date: str) -> List[Dict[str, Any]]:
     """Get the aggregate daily trends."""
-    path = db.get_gold_path("daily_trends")
-    query = f"""
-        SELECT publish_date, source_domain, category, SUM(total_articles) as total_articles
-        FROM read_parquet('{path}')
-        WHERE publish_date >= '{start_date}' AND publish_date <= '{end_date}'
-        GROUP BY publish_date, source_domain, category
-        ORDER BY publish_date DESC, total_articles DESC
-    """
-    return db.query(query)
+    try:
+        path = db.get_gold_path("daily_trends")
+        query = f"""
+            SELECT publish_date, source_domain, category, SUM(total_articles) as total_articles
+            FROM read_parquet('{path}')
+            WHERE publish_date >= '{start_date}' AND publish_date <= '{end_date}'
+            GROUP BY publish_date, source_domain, category
+            ORDER BY publish_date DESC, total_articles DESC
+        """
+        return db.query(query)
+    except Exception as e:
+        error_msg = str(e)
+        if "No files found" in error_msg or "Timeout was reached" in error_msg:
+            return []
+        logger.error(f"Failed to fetch daily trends: {e}")
+        return []
 
 
 def fetch_top_entities(publish_date: str, limit: int = 10) -> List[Dict[str, Any]]:
     """Retrieve the most frequently mentioned entities for a specific date."""
-    path = db.get_gold_path("entity_mentions")
-    query = f"""
-        SELECT entity_name, entity_type, SUM(mention_count) as total_mentions
-        FROM read_parquet('{path}')
-        WHERE publish_date = '{publish_date}'
-        GROUP BY entity_name, entity_type
-        ORDER BY total_mentions DESC
-        LIMIT {limit}
-    """
-    return db.query(query)
+    try:
+        path = db.get_gold_path("entity_mentions")
+        query = f"""
+            SELECT entity_name, entity_type, SUM(mention_count) as total_mentions
+            FROM read_parquet('{path}')
+            WHERE publish_date = '{publish_date}'
+            GROUP BY entity_name, entity_type
+            ORDER BY total_mentions DESC
+            LIMIT {limit}
+        """
+        return db.query(query)
+    except Exception as e:
+        error_msg = str(e)
+        if "No files found" in error_msg or "Timeout was reached" in error_msg:
+            return []
+        logger.error(f"Failed to fetch top entities: {e}")
+        return []
 
 
 def fetch_system_statistics() -> Dict[str, Any]:
@@ -124,10 +147,12 @@ def fetch_system_statistics() -> Dict[str, Any]:
     }
     
     try:
-        # Bronze JSON Count
-        query = "SELECT count(*) as total FROM read_json_auto('s3://bronze/raw_news/**/*.json')"
-        res = db.query(query)
-        stats["bronze"]["raw_messages"] = res[0]["total"] if res else 0
+        # Bronze JSON Count (Optimized)
+        # Instead of using DuckDB read_json_auto which fires thousands of HTTP HEAD requests and times out,
+        # we simply count the physical objects in the bucket, since 1 JSON file = 1 Bronze record!
+        minio = MinIOClient().client
+        objects = minio.list_objects(config.MINIO_BRONZE_BUCKET, prefix="raw_news/", recursive=True)
+        stats["bronze"]["raw_messages"] = sum(1 for _ in objects)
     except Exception as e:
         logger.warning(f"Failed to fetch bronze stats: {e}")
 

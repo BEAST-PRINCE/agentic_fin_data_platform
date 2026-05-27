@@ -53,14 +53,14 @@ class PipelineManager:
         if stage == "silver":
             cmd = [
                 "docker", "exec", "-e", "MINIO_ENDPOINT=minio:9000", "spark-master",
-                "/opt/spark/bin/spark-submit", "--master", "local[*]",
+                "/opt/spark/bin/spark-submit", "--master", "local[1]",
                 "--packages", "org.apache.hadoop:hadoop-aws:3.3.4,com.amazonaws:aws-java-sdk-bundle:1.12.262",
                 "/app/src/processing/silver_layer.py"
             ]
         elif stage == "gold":
             cmd = [
                 "docker", "exec", "-e", "MINIO_ENDPOINT=minio:9000", "spark-master",
-                "/opt/spark/bin/spark-submit", "--master", "local[*]",
+                "/opt/spark/bin/spark-submit", "--master", "local[1]",
                 "--packages", "org.apache.hadoop:hadoop-aws:3.3.4,com.amazonaws:aws-java-sdk-bundle:1.12.262",
                 "/app/src/processing/gold_layer.py"
             ]
@@ -76,7 +76,9 @@ class PipelineManager:
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
                 text=True,
-                bufsize=1
+                bufsize=1,
+                encoding="utf-8",
+                errors="replace"
             )
             
             self.active_process = p

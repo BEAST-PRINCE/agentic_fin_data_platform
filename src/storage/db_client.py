@@ -40,7 +40,9 @@ class DuckDBClient:
             rows = result.fetchall()
             return [dict(zip(columns, row)) for row in rows]
         except Exception as e:
-            logger.error(f"Failed to execute query: {e}")
+            error_msg = str(e)
+            if "No files found that match the pattern" not in error_msg and "Timeout was reached error" not in error_msg:
+                logger.error(f"Failed to execute query: {e}")
             raise
 
     def get_gold_path(self, table_name: str) -> str:
