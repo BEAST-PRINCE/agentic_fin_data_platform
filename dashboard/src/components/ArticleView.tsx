@@ -9,7 +9,8 @@ interface FullArticle {
   content?: string;
   source_domain: string;
   publish_timestamp: string;
-  extracted_keywords?: string[];
+  source_tags?: string[];
+  semantic_keywords?: string[];
   summary?: string;
   category?: string;
   author?: string;
@@ -99,11 +100,21 @@ export function ArticleView() {
             {article.title}
           </h1>
 
-          {/* Tags */}
-          {article.extracted_keywords && article.extracted_keywords.length > 0 && (
-            <div className="flex flex-wrap gap-2 mt-4">
-              {article.extracted_keywords.slice(0, 5).map((kw, i) => (
-                <span key={i} className="text-xs px-2.5 py-1 bg-gray-800 text-gray-300 rounded border border-gray-700">
+          {article.source_tags && article.source_tags.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2 mt-4">
+              {article.source_tags.map((tag, i) => (
+                <span key={i} className="px-2 py-1 rounded text-xs bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 font-medium">
+                  {tag}
+                </span>
+              ))}
+            </div>
+          )}
+          
+          {article.semantic_keywords && article.semantic_keywords.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2 mt-2">
+              {article.semantic_keywords.map((kw, i) => (
+                <span key={i} className="px-2 py-1 rounded text-xs bg-emerald-500/10 text-emerald-300 border border-emerald-500/20 flex items-center gap-1 font-medium">
+                  <Sparkles className="w-3 h-3" />
                   {kw}
                 </span>
               ))}

@@ -8,7 +8,8 @@ interface SearchResult {
   title: string;
   source_domain: string;
   publish_timestamp: string;
-  extracted_keywords: string[];
+  source_tags: string[];
+  semantic_keywords: string[];
 }
 
 export function SearchHub() {
@@ -92,12 +93,24 @@ export function SearchHub() {
                 <span>•</span>
                 <span>{new Date(hit.publish_timestamp).toLocaleDateString()}</span>
               </div>
-              <div className="flex flex-wrap gap-2">
-                {hit.extracted_keywords?.slice(0, 5).map((kw, i) => (
-                  <span key={i} className="text-[10px] px-2 py-1 bg-gray-800 text-gray-300 rounded border border-gray-700">
-                    {kw}
-                  </span>
-                ))}
+              <div className="flex flex-wrap items-center gap-2 mt-4 pt-4 border-t border-gray-800/50">
+                <div className="flex flex-wrap gap-2">
+                  {hit.source_tags?.slice(0, 3).map((tag, i) => (
+                    <span key={i} className="px-2 py-0.5 rounded text-xs bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 font-medium">
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+                {hit.semantic_keywords?.length > 0 && (
+                  <div className="flex flex-wrap gap-2 border-l border-gray-700 pl-2 ml-1">
+                    {hit.semantic_keywords?.slice(0, 3).map((kw, i) => (
+                      <span key={i} className="px-2 py-0.5 rounded text-xs bg-emerald-500/10 text-emerald-300 border border-emerald-500/20 flex items-center gap-1">
+                        <Sparkles className="w-3 h-3" />
+                        {kw}
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           ))

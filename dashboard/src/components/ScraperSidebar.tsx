@@ -63,7 +63,8 @@ export function ScraperSidebar() {
 
   useEffect(() => {
     fetchStatuses();
-    const interval = setInterval(fetchStatuses, 3000);
+    // Increased polling gap duration to reduce API load
+    const interval = setInterval(fetchStatuses, 10000);
     return () => clearInterval(interval);
   }, []);
 
@@ -90,7 +91,8 @@ export function ScraperSidebar() {
 
     fetchLogs();
     setPolling(true);
-    const interval = setInterval(fetchLogs, 2000);
+    // Increased polling gap duration to reduce API load
+    const interval = setInterval(fetchLogs, 10000);
     return () => clearInterval(interval);
   }, [selectedLogs]);
 
