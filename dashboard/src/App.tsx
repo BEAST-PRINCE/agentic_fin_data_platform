@@ -2,6 +2,7 @@ import { HealthGrid } from './components/HealthGrid';
 import { SearchHub } from './components/SearchHub';
 import { LiveFeed } from './components/LiveFeed';
 import { TrendingRadar } from './components/TrendingRadar';
+import { DailyTrends } from './components/DailyTrends';
 import { ScraperSidebar } from './components/ScraperSidebar';
 import { Database } from 'lucide-react';
 import { Routes, Route } from 'react-router-dom';
@@ -54,6 +55,7 @@ function DashboardLayout() {
           {/* Right: Trending */}
           <div className="col-span-12 lg:col-span-4 flex flex-col gap-8">
             <TrendingRadar />
+            <DailyTrends />
           </div>
 
           {/* Bottom: Live Feed */}

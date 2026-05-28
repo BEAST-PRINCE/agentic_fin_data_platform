@@ -138,6 +138,20 @@ def fetch_top_entities(publish_date: str, limit: int = 10) -> List[Dict[str, Any
         return []
 
 
+def fetch_available_dates() -> List[str]:
+    """Get a list of all distinct dates available in the daily trends."""
+    try:
+        path = db.get_gold_path("daily_trends")
+        query = f"SELECT DISTINCT publish_date FROM read_parquet('{path}') ORDER BY publish_date DESC"
+        res = db.query(query)
+        return [str(row["publish_date"]) for row in res if row.get("publish_date")]
+    except Exception as e:
+        error_msg = str(e)
+        if "No files found" in error_msg or "Timeout was reached" in error_msg:
+            return []
+        logger.error(f"Failed to fetch available dates: {e}")
+        return []
+
 def fetch_system_statistics() -> Dict[str, Any]:
     """Retrieve dynamic file and record counts across the Bronze, Silver, and Gold layers."""
     stats = {

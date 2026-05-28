@@ -23,7 +23,7 @@ class PipelineManager:
         self.active_process: subprocess.Popen = None
         self.active_stage: str = "idle"
         
-        self.log_buffer: List[str] = []
+        self.log_buffers: Dict[str, List[str]] = {"silver": [], "gold": [], "indexer": []}
         self.log_queue: queue.Queue = queue.Queue()
         
         self.flush_thread: threading.Thread = None
@@ -83,7 +83,7 @@ class PipelineManager:
             
             self.active_process = p
             self.active_stage = stage
-            self.log_buffer = []
+            self.log_buffers[stage] = []
             
             # Clear old queue
             while not self.log_queue.empty():
@@ -119,6 +119,8 @@ class PipelineManager:
         log_pattern = re.compile(r"^202\d-\d\d-\d\d \d\d:\d\d:\d\d,\d\d\d - ")
         keep_multiline = False
         
+        current_stage = self.active_stage
+        
         for line in iter(stdout.readline, ''):
             clean_line = line.strip()
             if clean_line:
@@ -128,15 +130,15 @@ class PipelineManager:
                 if is_our_log or is_traceback:
                     keep_multiline = True
                     self.log_queue.put(clean_line)
-                    self.log_buffer.append(clean_line)
-                    if len(self.log_buffer) > 200:
-                        self.log_buffer.pop(0)
+                    self.log_buffers[current_stage].append(clean_line)
+                    if len(self.log_buffers[current_stage]) > 200:
+                        self.log_buffers[current_stage].pop(0)
                 elif keep_multiline and (line.startswith(" ") or line.startswith("\t")):
                     # It's a continuation of a traceback or multiline log
                     self.log_queue.put(clean_line)
-                    self.log_buffer.append(clean_line)
-                    if len(self.log_buffer) > 200:
-                        self.log_buffer.pop(0)
+                    self.log_buffers[current_stage].append(clean_line)
+                    if len(self.log_buffers[current_stage]) > 200:
+                        self.log_buffers[current_stage].pop(0)
                 else:
                     # It's an internal Spark/JVM log, ignore it!
                     keep_multiline = False
@@ -176,7 +178,7 @@ class PipelineManager:
                 except Exception as e:
                     logger.error(f"Failed to upload pipeline logs to MinIO for {stage}: {e}")
 
-    def get_logs(self) -> List[str]:
-        return self.log_buffer
+    def get_logs(self, stage: str) -> List[str]:
+        return self.log_buffers.get(stage, [])
 
 pipeline_manager = PipelineManager()

@@ -110,9 +110,11 @@ async def stop_pipeline():
     return res
 
 @app.get("/api/pipeline/logs")
-async def get_pipeline_logs():
+async def get_pipeline_logs(stage: str = Query(None, description="The specific stage to get logs for (silver, gold, indexer)")):
     """Get the live logs of the running pipeline stage."""
-    return {"logs": pipeline_manager.get_logs()}
+    if not stage:
+        return {"logs": []}
+    return {"logs": pipeline_manager.get_logs(stage)}
 
 @app.get("/articles", response_model=List[Dict[str, Any]])
 async def get_recent_articles(
@@ -167,3 +169,8 @@ async def get_top_entities(
         return retrieval.fetch_top_entities(publish_date, limit=limit)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/trends/dates", response_model=List[str])
+async def get_available_dates():
+    """Get all available dates with trending data."""
+    return retrieval.fetch_available_dates()

@@ -78,7 +78,7 @@ export function ScraperSidebar() {
     const fetchLogs = () => {
       const endpoint = selectedLogs.type === 'scraper' 
         ? `/api/scrapers/${selectedLogs.name}/logs`
-        : `/api/pipeline/logs`;
+        : `/api/pipeline/logs?stage=${selectedLogs.name}`;
         
       fetch(endpoint)
         .then(res => res.json())
