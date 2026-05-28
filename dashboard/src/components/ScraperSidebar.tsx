@@ -89,6 +89,8 @@ export function ScraperSidebar() {
         });
     };
 
+    // Immediately clear logs when switching views so old logs don't flash
+    setLogs([]);
     fetchLogs();
     setPolling(true);
     // Increased polling gap duration to reduce API load
