@@ -7,17 +7,25 @@ from src.common.logger import get_logger
 logger = get_logger(__name__)
 
 class MinIOClient:
+    _instance = None
+
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super(MinIOClient, cls).__new__(cls)
+            # minio client expects endpoint without http:// or https://
+            endpoint = config.MINIO_ENDPOINT.replace("http://", "").replace("https://", "")
+            
+            cls._instance.client = Minio(
+                endpoint,
+                access_key=config.MINIO_ACCESS_KEY,
+                secret_key=config.MINIO_SECRET_KEY,
+                secure=config.MINIO_SECURE
+            )
+            logger.info(f"Initialized MinIO client at {endpoint}")
+        return cls._instance
+
     def __init__(self):
-        # minio client expects endpoint without http:// or https://
-        endpoint = config.MINIO_ENDPOINT.replace("http://", "").replace("https://", "")
-        
-        self.client = Minio(
-            endpoint,
-            access_key=config.MINIO_ACCESS_KEY,
-            secret_key=config.MINIO_SECRET_KEY,
-            secure=config.MINIO_SECURE
-        )
-        logger.info(f"Initialized MinIO client at {endpoint}")
+        pass
 
     def ensure_bucket_exists(self, bucket_name: str):
         """Creates the bucket if it does not already exist."""
