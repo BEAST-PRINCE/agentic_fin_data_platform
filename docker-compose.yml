@@ -8,8 +8,8 @@ services:
     ports:
       - "2181:2181"
     volumes:
-      - ./data/zookeeper/data:/var/lib/zookeeper/data
-      - ./data/zookeeper/log:/var/lib/zookeeper/log
+      - zookeeper_data:/var/lib/zookeeper/data
+      - zookeeper_log:/var/lib/zookeeper/log
     healthcheck:
       test: ["CMD-SHELL", "echo srvr | nc localhost 2181 || exit 1"]
       interval: 10s
@@ -35,7 +35,7 @@ services:
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
     volumes:
-      - ./data/kafka/data:/var/lib/kafka/data
+      - kafka_data:/var/lib/kafka/data
     healthcheck:
       test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:9092"]
       interval: 10s
@@ -65,7 +65,10 @@ services:
       - datalake-net
 
   spark-master:
-    image: apache/spark-py:v3.4.0
+    build:
+      context: .
+      dockerfile: Dockerfile.spark
+    image: agentic-spark:latest
     container_name: spark-master
     user: root
     command: /opt/spark/bin/spark-class org.apache.spark.deploy.master.Master
@@ -80,11 +83,21 @@ services:
       - "7077:7077"
     volumes:
       - ./:/app
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
     networks:
       - datalake-net
 
   spark-worker:
-    image: apache/spark-py:v3.4.0
+    build:
+      context: .
+      dockerfile: Dockerfile.spark
+    image: agentic-spark:latest
     container_name: spark-worker
     user: root
     command: /opt/spark/bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077
@@ -99,6 +112,13 @@ services:
       - SPARK_SSL_ENABLED=no
     volumes:
       - ./:/app
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
     networks:
       - datalake-net
 
@@ -133,3 +153,8 @@ services:
 networks:
   datalake-net:
     driver: bridge
+
+volumes:
+  zookeeper_data:
+  zookeeper_log:
+  kafka_data:

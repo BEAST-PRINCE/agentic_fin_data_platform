@@ -23,7 +23,10 @@ class SentenceTransformerEmbedder(BaseEmbedder):
             print("WARNING: CUDA requested but not available. Falling back to CPU.", file=sys.stderr)
             device = 'cpu'
             
-        self.model = SentenceTransformer(model_name, device=device)
+        from src.common import config
+        
+        token = config.HF_TOKEN if config.HF_TOKEN else None
+        self.model = SentenceTransformer(model_name, device=device, token=token)
         
     def embed(self, texts: List[str]) -> List[List[float]]:
         # Returns numpy array, convert to nested list of floats

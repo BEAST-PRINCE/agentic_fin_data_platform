@@ -1,6 +1,8 @@
 import json
 import sys
 import os
+import time
+from urllib.parse import urlparse
 from datetime import datetime, timezone
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..")))
@@ -60,10 +62,14 @@ class BronzeConsumer:
                     bootstrap_servers=config.KAFKA_BOOTSTRAP_SERVERS,
                     value_serializer=lambda v: json.dumps(v).encode("utf-8"),
                 )
-                logger.info(f"DLQ producer ready (topic={config.KAFKA_DLQ_TOPIC})")
+                logger.info(f"Kafka DLQ producer enabled for topic: {config.KAFKA_DLQ_TOPIC}")
             except Exception as e:
-                logger.error(f"Failed to initialize DLQ producer: {e}")
+                logger.error(f"Failed to connect Kafka DLQ producer: {e}")
 
+        # Initialize domain stats
+        self.domain_counts = {}
+        self.last_flush_time = time.time()
+        
         self.s3_client = boto3.client(
             "s3",
             endpoint_url=MINIO_ENDPOINT,
@@ -71,6 +77,14 @@ class BronzeConsumer:
             aws_secret_access_key=config.MINIO_SECRET_KEY,
             region_name="us-east-1",
         )
+        
+        try:
+            res = self.s3_client.get_object(Bucket=config.MINIO_BRONZE_BUCKET, Key="domain_throughput.json")
+            self.domain_counts = json.loads(res["Body"].read().decode("utf-8"))
+            logger.info("Loaded initial domain throughput stats from MinIO.")
+        except Exception as e:
+            logger.info("No existing domain throughput stats found or could not load.")
+            
         self._ensure_bucket()
 
     def _ensure_bucket(self):
@@ -135,6 +149,19 @@ class BronzeConsumer:
         except Exception:
             return False
 
+    def _flush_domain_stats(self):
+        try:
+            json_bytes = json.dumps(self.domain_counts, indent=2).encode("utf-8")
+            self.s3_client.put_object(
+                Bucket=config.MINIO_BRONZE_BUCKET,
+                Key="domain_throughput.json",
+                Body=json_bytes,
+                ContentType="application/json",
+            )
+            logger.info("Flushed domain throughput stats to MinIO.")
+        except Exception as e:
+            logger.error(f"Failed to flush domain stats: {e}")
+
     def start_consuming(self):
         if not self.consumer:
             logger.error("No Kafka consumer configured.")
@@ -177,6 +204,19 @@ class BronzeConsumer:
                     f"Saved {article_id} (source={sanitize_source_partition(article_data.get('source'))}) "
                     f"to s3://{config.MINIO_BRONZE_BUCKET}/{s3_key}"
                 )
+                
+                # Update domain throughput stats
+                url = article_data.get("url")
+                if url:
+                    domain = urlparse(url).netloc
+                    if domain:
+                        self.domain_counts[domain] = self.domain_counts.get(domain, 0) + 1
+                        
+                # Flush every 5 seconds
+                if time.time() - self.last_flush_time >= 5:
+                    self._flush_domain_stats()
+                    self.last_flush_time = time.time()
+                    
             except Exception as e:
                 logger.error(
                     f"Failed to upload {article_id} to MinIO (offset not committed, will retry): {e}"
@@ -189,3 +229,7 @@ if __name__ == "__main__":
         consumer.start_consuming()
     except KeyboardInterrupt:
         logger.info("Stopping consumer.")
+    finally:
+        consumer._flush_domain_stats()
+        if consumer.consumer:
+            consumer.consumer.close()

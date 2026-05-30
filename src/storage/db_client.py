@@ -5,6 +5,7 @@ import duckdb
 # Ensure the project root is in the path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
+import threading
 from src.common import config
 from src.common.logger import get_logger
 
@@ -13,6 +14,7 @@ logger = get_logger(__name__)
 class DuckDBClient:
     def __init__(self):
         self.conn = duckdb.connect(':memory:')
+        self.lock = threading.Lock()
         self._setup_s3()
 
     def _setup_s3(self):
@@ -35,12 +37,15 @@ class DuckDBClient:
     def query(self, sql_query: str):
         """Execute a query and return results as a list of dictionaries"""
         try:
-            result = self.conn.execute(sql_query)
-            columns = [desc[0] for desc in result.description]
-            rows = result.fetchall()
+            with self.lock:
+                result = self.conn.execute(sql_query)
+                columns = [desc[0] for desc in result.description]
+                rows = result.fetchall()
             return [dict(zip(columns, row)) for row in rows]
         except Exception as e:
-            logger.error(f"Failed to execute query: {e}")
+            error_msg = str(e)
+            if "No files found that match the pattern" not in error_msg and "Timeout was reached error" not in error_msg:
+                logger.error(f"Failed to execute query: {e}")
             raise
 
     def get_gold_path(self, table_name: str) -> str:
