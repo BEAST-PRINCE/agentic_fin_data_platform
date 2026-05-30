@@ -34,3 +34,7 @@ Phase9_Executionplan.txt
 
 # Graphify
 graphify_project/
+
+
+dashboard/node_modules/
+dashboard/dist/
