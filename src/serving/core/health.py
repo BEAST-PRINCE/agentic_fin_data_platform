@@ -20,19 +20,30 @@ def check_minio() -> Dict[str, Any]:
         return {"status": "offline", "latency_ms": None, "error": str(e)}
 
 def check_kafka() -> Dict[str, Any]:
+    """
+    Perform a lightweight TCP socket ping to the Kafka broker.
+    This replaces the heavy KafkaConsumer initialization, dropping latency 
+    from hundreds of milliseconds down to ~1-5ms.
+    """
+    import socket
     start = time.time()
     try:
-        from kafka import KafkaConsumer
-        consumer = KafkaConsumer(
-            bootstrap_servers=config.KAFKA_BOOTSTRAP_SERVERS,
-            request_timeout_ms=1000,
-            session_timeout_ms=2000,
-            connections_max_idle_ms=3000
-        )
-        consumer.topics()
-        consumer.close()
-        latency = round((time.time() - start) * 1000, 2)
-        return {"status": "online", "latency_ms": latency}
+        host, port = config.KAFKA_BOOTSTRAP_SERVERS.split(":")
+        
+        # Create a native TCP socket
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.settimeout(2.0)
+        
+        # Attempt to connect
+        result = sock.connect_ex((host, int(port)))
+        sock.close()
+        
+        if result == 0:
+            latency = round((time.time() - start) * 1000, 2)
+            return {"status": "online", "latency_ms": latency}
+        else:
+            return {"status": "offline", "latency_ms": None, "error": f"Socket error code: {result}"}
+            
     except Exception as e:
         logger.warning(f"Kafka health check failed: {e}")
         return {"status": "offline", "latency_ms": None, "error": str(e)}

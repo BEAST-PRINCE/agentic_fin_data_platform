@@ -1,5 +1,6 @@
 import os
 import sys
+import time
 from typing import List, Optional, Dict, Any
 
 # Ensure project root is in path
@@ -11,6 +12,11 @@ from src.common import config
 from src.common.logger import get_logger
 
 logger = get_logger(__name__)
+
+# Simple in-memory caching for expensive datalake aggregations
+_stats_cache = {"timestamp": 0, "data": {}}
+_throughput_cache = {"timestamp": 0, "data": {}}
+CACHE_TTL_SECONDS = 15
 
 # Lazy initialization singletons for Vector DB
 _embedder = None
@@ -153,7 +159,14 @@ def fetch_available_dates() -> List[str]:
         return []
 
 def fetch_system_statistics() -> Dict[str, Any]:
-    """Retrieve dynamic file and record counts across the Bronze, Silver, and Gold layers."""
+    """
+    Retrieve dynamic file and record counts across the Bronze, Silver, and Gold layers.
+    Results are cached for CACHE_TTL_SECONDS to avoid excessive MinIO scanning on dashboard reloads.
+    """
+    global _stats_cache
+    if time.time() - _stats_cache["timestamp"] < CACHE_TTL_SECONDS:
+        return _stats_cache["data"]
+
     stats = {
         "bronze": {"raw_messages": 0},
         "silver": {"cleaned_articles": 0},
@@ -187,15 +200,27 @@ def fetch_system_statistics() -> Dict[str, Any]:
     except Exception as e:
         logger.warning(f"Failed to fetch gold stats: {e}")
         
+    _stats_cache["data"] = stats
+    _stats_cache["timestamp"] = time.time()
+    
     return stats
 
 
 def fetch_domain_throughput() -> Dict[str, Any]:
-    """Retrieve the real-time domain throughput counts directly from the JSON tracker in MinIO."""
+    """
+    Retrieve the real-time domain throughput counts directly from the JSON tracker in MinIO.
+    Results are cached for CACHE_TTL_SECONDS to reduce S3 overhead.
+    """
+    global _throughput_cache
+    if time.time() - _throughput_cache["timestamp"] < CACHE_TTL_SECONDS:
+        return _throughput_cache["data"]
+        
     try:
         query = "SELECT * FROM read_json_auto('s3://bronze/domain_throughput.json')"
         res = db.query(query)
         if res:
+            _throughput_cache["data"] = res[0]
+            _throughput_cache["timestamp"] = time.time()
             return res[0]
         return {}
     except Exception as e:

@@ -35,16 +35,23 @@ async def health_check():
     return {"status": "ok", "service": "agentic_datalake_api"}
 
 @app.get("/api/system/statistics", response_model=Dict[str, Any])
-async def get_system_statistics():
-    """Retrieve datalake statistics for the dashboard."""
+def get_system_statistics():
+    """
+    Retrieve datalake statistics for the dashboard.
+    Note: Removed 'async' so FastAPI runs this in a background threadpool, 
+    preventing synchronous DuckDB/MinIO calls from blocking the event loop.
+    """
     try:
         return retrieval.fetch_system_statistics()
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/domain-throughput", response_model=Dict[str, Any])
-async def get_domain_throughput():
-    """Retrieve real-time domain throughput stats."""
+def get_domain_throughput():
+    """
+    Retrieve real-time domain throughput stats.
+    Executes synchronous DuckDB queries in a background threadpool.
+    """
     try:
         return retrieval.fetch_domain_throughput()
     except Exception as e:
@@ -52,8 +59,11 @@ async def get_domain_throughput():
         raise HTTPException(status_code=500, detail="Internal server error")
 
 @app.get("/api/health", response_model=Dict[str, Any])
-async def check_system_health():
-    """Perform health checks on all dependent infrastructure components."""
+def check_system_health():
+    """
+    Perform health checks on all dependent infrastructure components.
+    Executes synchronous socket/HTTP checks in a background threadpool.
+    """
     try:
         return health.get_system_health()
     except Exception as e:
@@ -61,12 +71,12 @@ async def check_system_health():
         raise HTTPException(status_code=500, detail="Internal server error")
 
 @app.get("/api/scrapers", response_model=List[Dict[str, Any]])
-async def list_scrapers():
-    """List all available scrapers and their status."""
+def list_scrapers():
+    """List all available scrapers and their status in a threadpool."""
     return scraper_manager.list_scrapers()
 
 @app.post("/api/scrapers/{name}/start")
-async def start_scraper(name: str):
+def start_scraper(name: str):
     """Start a scrapy spider."""
     res = scraper_manager.start_scraper(name)
     if res.get("status") == "error":
@@ -74,7 +84,7 @@ async def start_scraper(name: str):
     return res
 
 @app.post("/api/scrapers/{name}/stop")
-async def stop_scraper(name: str):
+def stop_scraper(name: str):
     """Stop a running scrapy spider."""
     res = scraper_manager.stop_scraper(name)
     if res.get("status") == "error":
@@ -82,19 +92,19 @@ async def stop_scraper(name: str):
     return res
 
 @app.get("/api/scrapers/{name}/logs")
-async def get_scraper_logs(name: str):
+def get_scraper_logs(name: str):
     """Get the real-time tail of the scraper logs."""
     return {"logs": scraper_manager.get_logs(name)}
 
 # --- Data Pipeline Endpoints ---
 
 @app.get("/api/pipeline/status")
-async def get_pipeline_status():
+def get_pipeline_status():
     """Get the active status of the data pipeline."""
     return pipeline_manager.get_status()
 
 @app.post("/api/pipeline/run/{stage}")
-async def run_pipeline_stage(stage: str):
+def run_pipeline_stage(stage: str):
     """Run a specific pipeline stage (silver, gold, indexer)."""
     res = pipeline_manager.run_stage(stage)
     if res.get("status") == "error":
@@ -102,7 +112,7 @@ async def run_pipeline_stage(stage: str):
     return res
 
 @app.post("/api/pipeline/stop")
-async def stop_pipeline():
+def stop_pipeline():
     """Stop the currently running pipeline stage."""
     res = pipeline_manager.stop_pipeline()
     if res.get("status") == "error":
@@ -110,25 +120,25 @@ async def stop_pipeline():
     return res
 
 @app.get("/api/pipeline/logs")
-async def get_pipeline_logs(stage: str = Query(None, description="The specific stage to get logs for (silver, gold, indexer)")):
+def get_pipeline_logs(stage: str = Query(None, description="The specific stage to get logs for (silver, gold, indexer)")):
     """Get the live logs of the running pipeline stage."""
     if not stage:
         return {"logs": []}
     return {"logs": pipeline_manager.get_logs(stage)}
 
 @app.get("/articles", response_model=List[Dict[str, Any]])
-async def get_recent_articles(
+def get_recent_articles(
     limit: int = Query(10, ge=1, le=100),
     offset: int = Query(0, ge=0)
 ):
-    """Retrieve a list of recently published articles."""
+    """Retrieve a list of recently published articles in a threadpool."""
     try:
         return retrieval.fetch_recent_articles(limit=limit, offset=offset)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/articles/{article_id}", response_model=Dict[str, Any])
-async def get_article_by_id(article_id: str):
+def get_article_by_id(article_id: str):
     """Retrieve a single article by its unique ID."""
     try:
         article = retrieval.fetch_article_by_id(article_id)
@@ -152,7 +162,7 @@ def semantic_search_articles(
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/trending", response_model=List[Dict[str, Any]])
-async def get_daily_trends(start_date: str, end_date: str):
+def get_daily_trends(start_date: str, end_date: str):
     """Retrieve aggregate daily trends across sources and categories."""
     try:
         return retrieval.fetch_daily_trends(start_date, end_date)
@@ -160,7 +170,7 @@ async def get_daily_trends(start_date: str, end_date: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/entities", response_model=List[Dict[str, Any]])
-async def get_top_entities(
+def get_top_entities(
     publish_date: str,
     limit: int = Query(10, ge=1, le=100)
 ):
@@ -171,6 +181,6 @@ async def get_top_entities(
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/trends/dates", response_model=List[str])
-async def get_available_dates():
+def get_available_dates():
     """Get all available dates with trending data."""
     return retrieval.fetch_available_dates()
