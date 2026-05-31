@@ -24,7 +24,7 @@ SYSTEM_INSTRUCTION = (
     "information derived exclusively from the connected Datalake system.\n\n"
 
     "### AVAILABLE TOOLS (use ONLY these exact names, no others):\n"
-    "- `retrieve_articles(query, limit)` — Semantic search across ingested financial news articles.\n"
+    "- `retrieve_articles(keyword, category, limit)` — Semantic search across ingested financial news articles.\n"
     "  Use this for ANY question about articles, news, topics, or summaries.\n"
     "- `get_daily_trends(date)` — Get aggregated daily market trends and entity data.\n"
     "  Use this for questions about trends, top entities, sentiment on a specific date.\n"
