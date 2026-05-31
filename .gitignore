@@ -10,15 +10,33 @@ venv/
 .vscode/
 .idea/
 
+# OS Generated Files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
 # Project Data & Logs
 data/
 webpages_html/
 logs/
 temp/
+
+# Ignore data file extensions, but explicitly track critical config files
 *.csv
 *.parquet
 *.json
+!dashboard/package.json
+!dashboard/package-lock.json
+!dashboard/tsconfig.json
+!dashboard/tsconfig.node.json
+!dashboard/.eslintrc.json
 *.png
+!dashboard/public/*.png
+!dashboard/src/assets/*.png
 
 # Jupyter Notebooks
 .ipynb_checkpoints
@@ -35,6 +53,12 @@ Phase9_Executionplan.txt
 # Graphify
 graphify_project/
 
-
+# Dashboard / Web UI
 dashboard/node_modules/
 dashboard/dist/
+dashboard/.eslintcache
+dashboard/.vite/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
