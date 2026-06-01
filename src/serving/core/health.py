@@ -62,7 +62,8 @@ def check_qdrant() -> Dict[str, Any]:
 def check_duckdb() -> Dict[str, Any]:
     start = time.time()
     try:
-        db.query("SELECT 1")
+        import duckdb
+        duckdb.execute("SELECT 1").fetchall()
         latency = round((time.time() - start) * 1000, 2)
         return {"status": "online", "latency_ms": latency}
     except Exception as e:
