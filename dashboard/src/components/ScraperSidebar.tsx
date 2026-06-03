@@ -48,6 +48,9 @@ export function ScraperSidebar() {
       .then(([scrapersData, pipelineData]) => {
         setScrapers(scrapersData);
         setPipeline(prev => {
+          if (prev.active_stage === 'gold' && pipelineData.active_stage !== 'gold') {
+            window.dispatchEvent(new Event('goldStageCompleted'));
+          }
           if (prev.active_stage !== 'idle' && pipelineData.active_stage === 'idle') {
             window.dispatchEvent(new Event('pipelineCompleted'));
           }
