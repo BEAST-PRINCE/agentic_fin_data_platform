@@ -50,9 +50,18 @@ class MoneycontrolBusinessSpider(CrawlSpider):
         paragraphs = response.xpath('//div[contains(@class, "content_wrapper")]//p//text()').getall()
         content = " ".join(p.strip()for p in paragraphs if p.strip())
         author = response.xpath('//div[contains(@class, "article_author")]//a/text()').get(default="").strip()
-        published_date = response.xpath('//div[contains(@class, "article_schedule")]//span/text()').get(default="").strip()
-        published_time = response.xpath('normalize-space(//div[contains(@class, "article_schedule")])').get(default="")
-        published_at = f"{published_date} {published_time}".strip()
+        # Extract messy date text (e.g., "June 04, 2026 / 10:00 AM IST")
+        raw_date_text = response.xpath('normalize-space(//div[contains(@class, "article_schedule")])').get(default="")
+        try:
+            from dateutil import parser
+            # Replace IST with standard UTC offset to help dateutil parse correctly
+            clean_text = raw_date_text.replace("IST", "+05:30")
+            # fuzzy=True smartly extracts the date components while ignoring junk characters like "/"
+            dt_obj = parser.parse(clean_text, fuzzy=True)
+            published_at = dt_obj.isoformat()
+        except Exception as e:
+            logger.warning(f"Failed to parse Moneycontrol date '{raw_date_text}': {e}")
+            published_at = raw_date_text  # Fallback
         category = response.xpath('//div[contains(@class, "article_consum_wrapper")]/@data-cat').get(default="business")
         tags = response.xpath('//meta[@name="news_keywords"]/@content').get()
 
