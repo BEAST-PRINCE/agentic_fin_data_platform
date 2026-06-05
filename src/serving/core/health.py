@@ -83,15 +83,33 @@ def check_ollama() -> Dict[str, Any]:
 
 def get_system_health() -> Dict[str, Any]:
     """Gather health status of all dependent services, skipping disabled ones."""
+    from src.serving.core.metrics import MINIO_UP, KAFKA_UP, QDRANT_UP, DUCKDB_UP, LAKEHOUSE_READY
     health_status = {}
+    
     if config.HEALTH_CHECK_ENABLE_MINIO:
         health_status["minio"] = check_minio()
+        MINIO_UP.set(1 if health_status["minio"]["status"] == "online" else 0)
+        
     if config.HEALTH_CHECK_ENABLE_KAFKA:
         health_status["kafka"] = check_kafka()
+        KAFKA_UP.set(1 if health_status["kafka"]["status"] == "online" else 0)
+        
     if config.HEALTH_CHECK_ENABLE_QDRANT:
         health_status["qdrant"] = check_qdrant()
+        QDRANT_UP.set(1 if health_status["qdrant"]["status"] == "online" else 0)
+        
     if config.HEALTH_CHECK_ENABLE_DUCKDB:
         health_status["duckdb"] = check_duckdb()
+        DUCKDB_UP.set(1 if health_status["duckdb"]["status"] == "online" else 0)
+        
     if config.HEALTH_CHECK_ENABLE_OLLAMA:
         health_status["ollama"] = check_ollama()
+        
+    # Calculate aggregated lakehouse_ready metric
+    components = [health_status.get("minio", {}), health_status.get("kafka", {}), health_status.get("duckdb", {})]
+    if all(c.get("status") == "online" for c in components):
+        LAKEHOUSE_READY.set(1)
+    else:
+        LAKEHOUSE_READY.set(0)
+        
     return health_status

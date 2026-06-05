@@ -21,6 +21,10 @@ app = FastAPI(
     version="1.0.0"
 )
 
+# Instrument the FastAPI app for Prometheus metrics (HTTP request totals, duration, etc.)
+from prometheus_fastapi_instrumentator import Instrumentator
+Instrumentator().instrument(app).expose(app)
+
 @app.on_event("startup")
 async def startup_event():
     """Initialize heavy models on the main thread to avoid PyTorch OpenMP deadlocks in background threads."""

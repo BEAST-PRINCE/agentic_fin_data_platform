@@ -73,6 +73,7 @@ def fetch_recent_articles(limit: int = 10, offset: int = 0) -> List[Dict[str, An
 
 def semantic_search(query_text: str, limit: int = 10) -> List[Dict[str, Any]]:
     """Search for articles semantically using Qdrant."""
+    start_time = time.time()
     try:
         embedder = _get_embedder()
         qdrant = _get_qdrant()
@@ -96,6 +97,14 @@ def semantic_search(query_text: str, limit: int = 10) -> List[Dict[str, Any]]:
                 "source_tags": hit.payload.get("source_tags", []),
                 "semantic_keywords": hit.payload.get("semantic_keywords", [])
             })
+            
+        # Record Prometheus Metrics
+        try:
+            from src.serving.core.metrics import VECTOR_SEARCH_REQUESTS, VECTOR_SEARCH_LATENCY
+            VECTOR_SEARCH_REQUESTS.inc()
+            VECTOR_SEARCH_LATENCY.observe(time.time() - start_time)
+        except ImportError:
+            pass
             
         return formatted_results
     except Exception as e:
@@ -202,6 +211,23 @@ def fetch_system_statistics() -> Dict[str, Any]:
         
     _stats_cache["data"] = stats
     _stats_cache["timestamp"] = time.time()
+    
+    # Update Prometheus Gauges
+    try:
+        from src.serving.core.metrics import BRONZE_RECORDS, SILVER_RECORDS, GOLD_RECORDS, QDRANT_VECTORS_TOTAL
+        BRONZE_RECORDS.set(stats["bronze"]["raw_messages"])
+        SILVER_RECORDS.set(stats["silver"]["cleaned_articles"])
+        GOLD_RECORDS.set(stats["gold"]["serving_articles"])
+        
+        # Try fetching Qdrant total vectors
+        try:
+            qdrant = _get_qdrant()
+            info = qdrant.get_collection("articles")
+            QDRANT_VECTORS_TOTAL.set(info.points_count)
+        except Exception:
+            pass
+    except ImportError:
+        pass
     
     return stats
 
