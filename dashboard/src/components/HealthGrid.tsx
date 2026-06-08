@@ -49,7 +49,19 @@ export function HealthGrid() {
     return () => window.removeEventListener('pipelineCompleted', fetchHealth);
   }, []);
 
-  if (loading) return <div className="glass-panel p-6 animate-pulse h-32"></div>;
+  if (loading) {
+    return (
+      <div className="glass-panel p-6">
+        <div className="flex items-center gap-2 mb-6">
+          <DatabaseZap className="w-5 h-5 text-purple-400" />
+          <h2 className="text-lg font-semibold text-gray-200">Lakehouse Throughput</h2>
+        </div>
+        <div className="flex justify-center items-center h-32">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500"></div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="glass-panel p-6">
