@@ -115,9 +115,14 @@ export function DailyTrends() {
         <div className="relative" ref={calendarRef}>
           <button
             onClick={() => setShowCalendar(!showCalendar)}
-            className="flex items-center gap-2 bg-gray-900 border border-gray-700 text-gray-300 text-sm rounded-lg hover:bg-gray-800 transition-colors px-4 py-2 outline-none focus:ring-1 focus:ring-purple-500"
+            disabled={loading}
+            className={`flex items-center gap-2 border text-sm rounded-lg transition-colors px-4 py-2 outline-none focus:ring-1 focus:ring-purple-500 ${
+              loading 
+                ? 'bg-gray-900/50 border-gray-800 text-gray-500 cursor-not-allowed' 
+                : 'bg-gray-900 border-gray-700 text-gray-300 hover:bg-gray-800'
+            }`}
           >
-            <CalendarIcon className="w-4 h-4 text-purple-400" />
+            <CalendarIcon className={`w-4 h-4 ${loading ? 'text-gray-600' : 'text-purple-400'}`} />
             <span className="font-medium tracking-wide">{selectedDate || "Select Date"}</span>
           </button>
 
