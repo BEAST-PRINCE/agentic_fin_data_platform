@@ -6,6 +6,7 @@ from kafka import KafkaConsumer
 from src.common import config
 from src.common.logger import get_logger
 from src.storage.minio_client import MinIOClient
+from src.storage.lakehouse_stats import increment_bronze
 
 logger = get_logger(__name__)
 
@@ -80,7 +81,8 @@ class NewsConsumer:
         
         # Upload
         self.minio_client.upload_stream(self.minio_bucket, object_path, buffer, length)
-        
+        increment_bronze(len(batch))
+
         # Manually commit Kafka offsets to ensure at-least-once delivery
         self.consumer.commit()
         logger.info(f"Committed Kafka offsets after successful batch upload.")

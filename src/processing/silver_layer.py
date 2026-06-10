@@ -10,6 +10,7 @@ from pyspark.sql.functions import col, split, size, lit
 from src.common import config
 from src.common.logger import get_logger
 from src.storage.minio_client import MinIOClient
+from src.storage.lakehouse_stats import add_silver_records
 
 logger = get_logger(__name__)
 
@@ -146,6 +147,8 @@ def process_silver_layer(sources: Optional[List[str]] = None):
 
     logger.info(f"Writing cleaned data to Silver layer: {silver_path} in Parquet format...")
     cleaned_df.write.mode("append").parquet(silver_path)
+
+    add_silver_records(final_count)
 
     # Update state tracker only after a successful write
     update_last_processed_timestamp(latest_mod_time)

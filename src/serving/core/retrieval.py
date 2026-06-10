@@ -7,7 +7,7 @@ from typing import List, Optional, Dict, Any
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))
 
 from src.storage.db_client import db
-from src.storage.minio_client import MinIOClient
+from src.storage.lakehouse_stats import get_stats
 from src.common import config
 from src.common.logger import get_logger
 
@@ -73,6 +73,7 @@ def fetch_recent_articles(limit: int = 10, offset: int = 0) -> List[Dict[str, An
 
 def semantic_search(query_text: str, limit: int = 10) -> List[Dict[str, Any]]:
     """Search for articles semantically using Qdrant."""
+    start_time = time.time()
     try:
         embedder = _get_embedder()
         qdrant = _get_qdrant()
@@ -96,6 +97,14 @@ def semantic_search(query_text: str, limit: int = 10) -> List[Dict[str, Any]]:
                 "source_tags": hit.payload.get("source_tags", []),
                 "semantic_keywords": hit.payload.get("semantic_keywords", [])
             })
+            
+        # Record Prometheus Metrics
+        try:
+            from src.serving.core.metrics import VECTOR_SEARCH_REQUESTS, VECTOR_SEARCH_LATENCY
+            VECTOR_SEARCH_REQUESTS.inc()
+            VECTOR_SEARCH_LATENCY.observe(time.time() - start_time)
+        except ImportError:
+            pass
             
         return formatted_results
     except Exception as e:
@@ -160,48 +169,47 @@ def fetch_available_dates() -> List[str]:
 
 def fetch_system_statistics() -> Dict[str, Any]:
     """
-    Retrieve dynamic file and record counts across the Bronze, Silver, and Gold layers.
-    Results are cached for CACHE_TTL_SECONDS to avoid excessive MinIO scanning on dashboard reloads.
+    Retrieve lakehouse record counts from maintained counters in MinIO.
+    Results are cached briefly to avoid redundant object reads on dashboard reloads.
     """
     global _stats_cache
     if time.time() - _stats_cache["timestamp"] < CACHE_TTL_SECONDS:
         return _stats_cache["data"]
 
-    stats = {
-        "bronze": {"raw_messages": 0},
-        "silver": {"cleaned_articles": 0},
-        "gold": {"serving_articles": 0}
-    }
-    
     try:
-        # Bronze JSON Count (Optimized)
-        # Instead of using DuckDB read_json_auto which fires thousands of HTTP HEAD requests and times out,
-        # we simply count the physical objects in the bucket, since 1 JSON file = 1 Bronze record!
-        minio = MinIOClient().client
-        objects = minio.list_objects(config.MINIO_BRONZE_BUCKET, prefix="raw_news/", recursive=True)
-        stats["bronze"]["raw_messages"] = sum(1 for _ in objects)
+        maintained = get_stats()
+        stats = {
+            "bronze": {"raw_messages": maintained["bronze"]["raw_messages"]},
+            "silver": {"cleaned_articles": maintained["silver"]["cleaned_articles"]},
+            "gold": {"serving_articles": maintained["gold"]["serving_articles"]},
+        }
     except Exception as e:
-        logger.warning(f"Failed to fetch bronze stats: {e}")
+        logger.warning(f"Failed to read maintained lakehouse stats: {e}")
+        stats = {
+            "bronze": {"raw_messages": 0},
+            "silver": {"cleaned_articles": 0},
+            "gold": {"serving_articles": 0},
+        }
 
-    try:
-        # Silver Parquet Count
-        query = "SELECT count(*) as total FROM read_parquet('s3://silver/cleaned_news/**/*.parquet')"
-        res = db.query(query)
-        stats["silver"]["cleaned_articles"] = res[0]["total"] if res else 0
-    except Exception as e:
-        logger.warning(f"Failed to fetch silver stats: {e}")
-        
-    try:
-        # Gold Parquet Count
-        gold_path = db.get_gold_path("articles_serving")
-        query = f"SELECT count(*) as total FROM read_parquet('{gold_path}')"
-        res = db.query(query)
-        stats["gold"]["serving_articles"] = res[0]["total"] if res else 0
-    except Exception as e:
-        logger.warning(f"Failed to fetch gold stats: {e}")
-        
     _stats_cache["data"] = stats
     _stats_cache["timestamp"] = time.time()
+    
+    # Update Prometheus Gauges
+    try:
+        from src.serving.core.metrics import BRONZE_RECORDS, SILVER_RECORDS, GOLD_RECORDS, QDRANT_VECTORS_TOTAL
+        BRONZE_RECORDS.set(stats["bronze"]["raw_messages"])
+        SILVER_RECORDS.set(stats["silver"]["cleaned_articles"])
+        GOLD_RECORDS.set(stats["gold"]["serving_articles"])
+        
+        # Try fetching Qdrant total vectors
+        try:
+            qdrant = _get_qdrant()
+            info = qdrant.get_collection("articles")
+            QDRANT_VECTORS_TOTAL.set(info.points_count)
+        except Exception:
+            pass
+    except ImportError:
+        pass
     
     return stats
 

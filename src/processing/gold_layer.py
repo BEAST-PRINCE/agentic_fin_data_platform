@@ -13,6 +13,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(
 from src.common import config
 from src.common.logger import get_logger
 from src.storage.minio_client import MinIOClient
+from src.storage.lakehouse_stats import add_gold_records
 
 logger = get_logger(__name__)
 
@@ -209,7 +210,8 @@ def process_gold_layer():
     minio_client.ensure_bucket_exists(config.MINIO_GOLD_BUCKET)
 
     write_mode = "append"
-    
+    gold_serving_count = gold_articles_serving.count()
+
     logger.info("Writing gold_daily_trends...")
     gold_daily_trends.write.mode(write_mode).partitionBy("publish_date").parquet(f"{gold_base_path}/daily_trends")
     
@@ -219,6 +221,8 @@ def process_gold_layer():
     
     logger.info("Writing gold_entity_mentions...")
     gold_entity_mentions.write.mode(write_mode).partitionBy("publish_date").parquet(f"{gold_base_path}/entity_mentions")
+
+    add_gold_records(gold_serving_count)
 
     logger.info("Gold Layer processing completed successfully!")
     spark.stop()

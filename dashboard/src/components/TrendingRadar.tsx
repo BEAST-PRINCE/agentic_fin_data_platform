@@ -41,8 +41,8 @@ export function TrendingRadar() {
 
       <div className="flex-1 flex flex-col gap-4">
         {loading ? (
-          <div className="animate-pulse space-y-4">
-            {[1,2,3].map(i => <div key={i} className="h-10 bg-gray-800 rounded"></div>)}
+          <div className="flex-1 flex items-center justify-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-rose-500"></div>
           </div>
         ) : trends.length > 0 ? (
           trends.map((t, idx) => {

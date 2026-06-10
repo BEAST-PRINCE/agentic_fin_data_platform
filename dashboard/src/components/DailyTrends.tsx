@@ -11,7 +11,7 @@ export function DailyTrends() {
   const [availableDates, setAvailableDates] = useState<string[]>([]);
   const [selectedDate, setSelectedDate] = useState<string>('');
   const [entities, setEntities] = useState<EntityTrend[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   // Calendar specific state
   const [showCalendar, setShowCalendar] = useState(false);
@@ -45,9 +45,14 @@ export function DailyTrends() {
         if (dates && dates.length > 0) {
           setAvailableDates(dates);
           setSelectedDate(dates[0]); // Default to latest date
+        } else {
+          setLoading(false);
         }
       })
-      .catch(err => console.error("Failed to fetch dates:", err));
+      .catch(err => {
+        console.error("Failed to fetch dates:", err);
+        setLoading(false);
+      });
   };
 
   useEffect(() => {
@@ -110,9 +115,14 @@ export function DailyTrends() {
         <div className="relative" ref={calendarRef}>
           <button
             onClick={() => setShowCalendar(!showCalendar)}
-            className="flex items-center gap-2 bg-gray-900 border border-gray-700 text-gray-300 text-sm rounded-lg hover:bg-gray-800 transition-colors px-4 py-2 outline-none focus:ring-1 focus:ring-purple-500"
+            disabled={loading}
+            className={`flex items-center gap-2 border text-sm rounded-lg transition-colors px-4 py-2 outline-none focus:ring-1 focus:ring-purple-500 ${
+              loading 
+                ? 'bg-gray-900/50 border-gray-800 text-gray-500 cursor-not-allowed' 
+                : 'bg-gray-900 border-gray-700 text-gray-300 hover:bg-gray-800'
+            }`}
           >
-            <CalendarIcon className="w-4 h-4 text-purple-400" />
+            <CalendarIcon className={`w-4 h-4 ${loading ? 'text-gray-600' : 'text-purple-400'}`} />
             <span className="font-medium tracking-wide">{selectedDate || "Select Date"}</span>
           </button>
 
@@ -183,8 +193,8 @@ export function DailyTrends() {
 
       <div className="flex-1 flex flex-col gap-3 min-h-[200px]">
         {loading ? (
-          <div className="animate-pulse space-y-3">
-            {[1, 2, 3, 4, 5].map(i => <div key={i} className="h-8 bg-gray-800 rounded"></div>)}
+          <div className="flex-1 flex items-center justify-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500"></div>
           </div>
         ) : entities.length > 0 ? (
           <div className="flex flex-wrap gap-2">

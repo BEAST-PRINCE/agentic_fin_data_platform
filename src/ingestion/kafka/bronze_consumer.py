@@ -13,6 +13,7 @@ from kafka import KafkaConsumer, KafkaProducer
 from src.common import config
 from src.common.logger import get_logger
 from src.ingestion.kafka.schema import build_bronze_s3_key, sanitize_source_partition
+from src.storage.lakehouse_stats import increment_bronze
 
 logger = get_logger(__name__)
 
@@ -66,8 +67,9 @@ class BronzeConsumer:
             except Exception as e:
                 logger.error(f"Failed to connect Kafka DLQ producer: {e}")
 
-        # Initialize domain stats
+        # Initialize domain stats and pending bronze counter batch
         self.domain_counts = {}
+        self.pending_bronze_count = 0
         self.last_flush_time = time.time()
         
         self.s3_client = boto3.client(
@@ -158,6 +160,12 @@ class BronzeConsumer:
                 Body=json_bytes,
                 ContentType="application/json",
             )
+            if self.pending_bronze_count > 0:
+                increment_bronze(self.pending_bronze_count)
+                logger.info(
+                    f"Flushed {self.pending_bronze_count} bronze records to lakehouse stats."
+                )
+                self.pending_bronze_count = 0
             logger.info("Flushed domain throughput stats to MinIO.")
         except Exception as e:
             logger.error(f"Failed to flush domain stats: {e}")
@@ -205,13 +213,15 @@ class BronzeConsumer:
                     f"to s3://{config.MINIO_BRONZE_BUCKET}/{s3_key}"
                 )
                 
+                self.pending_bronze_count += 1
+
                 # Update domain throughput stats
                 url = article_data.get("url")
                 if url:
                     domain = urlparse(url).netloc
                     if domain:
                         self.domain_counts[domain] = self.domain_counts.get(domain, 0) + 1
-                        
+
                 # Flush every 5 seconds
                 if time.time() - self.last_flush_time >= 5:
                     self._flush_domain_stats()

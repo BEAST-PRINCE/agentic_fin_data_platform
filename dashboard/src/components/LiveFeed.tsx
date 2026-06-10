@@ -45,10 +45,8 @@ export function LiveFeed() {
       </div>
 
       {loading ? (
-        <div className="flex space-x-4 animate-pulse overflow-hidden">
-          {[1, 2, 3, 4].map(i => (
-            <div key={i} className="flex-shrink-0 w-64 h-24 bg-gray-800 rounded-lg"></div>
-          ))}
+        <div className="flex justify-center items-center h-24">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-500"></div>
         </div>
       ) : (
         <div className="flex overflow-x-auto pb-4 gap-4 snap-x hide-scrollbar">

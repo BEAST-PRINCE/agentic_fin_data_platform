@@ -103,6 +103,7 @@ export function ScraperSidebar() {
 
   const startScraper = async (name: string) => {
     try {
+      setSelectedLogs({ type: 'scraper', name });
       await fetch(`/api/scrapers/${name}/start`, { method: 'POST' });
       fetchStatuses();
     } catch (e) { console.error(e); }
@@ -117,6 +118,7 @@ export function ScraperSidebar() {
   
   const startPipeline = async (stage: string) => {
     try {
+      setSelectedLogs({ type: 'pipeline', name: stage });
       await fetch(`/api/pipeline/run/${stage}`, { method: 'POST' });
       fetchStatuses();
     } catch (e) { console.error(e); }
