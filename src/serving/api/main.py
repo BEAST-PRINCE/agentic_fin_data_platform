@@ -11,7 +11,11 @@ from pydantic import BaseModel
 from src.serving.core import retrieval, health
 from src.serving.core.scraper_manager import scraper_manager
 from src.serving.core.pipeline_manager import pipeline_manager
+from src.serving.core.agent_manager import agent_manager
 from src.common.logger import get_logger
+
+class ChatRequest(BaseModel):
+    message: str
 
 logger = get_logger(__name__)
 
@@ -32,6 +36,10 @@ async def startup_event():
     # This forces the lazy singleton to load in the main thread
     retrieval._get_embedder()
     logger.info("Embedding model initialized.")
+    
+    logger.info("Initializing Agent Session...")
+    await agent_manager.initialize_session()
+    logger.info("Agent Session initialized.")
 
 @app.get("/health")
 async def health_check():
@@ -188,3 +196,13 @@ def get_top_entities(
 def get_available_dates():
     """Get all available dates with trending data."""
     return retrieval.fetch_available_dates()
+
+@app.post("/api/chat")
+async def chat_with_agent(request: ChatRequest):
+    """Interact with the Datalake Intelligence Agent."""
+    try:
+        reply = await agent_manager.chat(request.message)
+        return {"reply": reply}
+    except Exception as e:
+        logger.error(f"Chat API error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
