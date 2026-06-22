@@ -38,10 +38,14 @@ class AgentManager:
         return cls._instance
 
     def __init__(self):
+        # Heavy components are lazily loaded
+        pass
+
+    async def initialize_session(self):
         if self._initialized:
             return
             
-        logger.info("Initializing AgentManager singleton...")
+        logger.info("Initializing AgentManager heavy components...")
         server_params = StdioConnectionParams(
             server_params=StdioServerParameters(
                 command=sys.executable,
@@ -82,6 +86,10 @@ class AgentManager:
             pass
 
     async def chat(self, message: str) -> str:
+        if not self._initialized:
+            logger.info("Agent was not initialized on boot. Initializing now...")
+            await self.initialize_session()
+            
         try:
             response = await self.runner.run_async(message, user_id="default_user", session_id="session_1")
             return response.content

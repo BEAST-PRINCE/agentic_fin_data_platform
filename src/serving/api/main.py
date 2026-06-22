@@ -11,7 +11,6 @@ from pydantic import BaseModel
 from src.serving.core import retrieval, health
 from src.serving.core.scraper_manager import scraper_manager
 from src.serving.core.pipeline_manager import pipeline_manager
-from src.serving.core.agent_manager import agent_manager
 from src.common.logger import get_logger
 
 class ChatRequest(BaseModel):
@@ -37,9 +36,14 @@ async def startup_event():
     retrieval._get_embedder()
     logger.info("Embedding model initialized.")
     
-    logger.info("Initializing Agent Session...")
-    await agent_manager.initialize_session()
-    logger.info("Agent Session initialized.")
+    from src.common import config
+    if config.START_AGENT_ON_BOOT:
+        from src.serving.core.agent_manager import agent_manager
+        logger.info("START_AGENT_ON_BOOT is true. Initializing Agent Session...")
+        await agent_manager.initialize_session()
+        logger.info("Agent Session initialized.")
+    else:
+        logger.info("START_AGENT_ON_BOOT is false. Agent will lazily initialize on first chat.")
 
 @app.get("/health")
 async def health_check():
@@ -201,6 +205,7 @@ def get_available_dates():
 async def chat_with_agent(request: ChatRequest):
     """Interact with the Datalake Intelligence Agent."""
     try:
+        from src.serving.core.agent_manager import agent_manager
         reply = await agent_manager.chat(request.message)
         return {"reply": reply}
     except Exception as e:
