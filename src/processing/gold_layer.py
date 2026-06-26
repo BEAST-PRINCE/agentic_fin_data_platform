@@ -32,7 +32,6 @@ def create_spark_session() -> SparkSession:
         .config("spark.hadoop.fs.s3a.path.style.access", "true") \
         .config("spark.hadoop.fs.s3a.impl", "org.apache.hadoop.fs.s3a.S3AFileSystem") \
         .config("spark.hadoop.fs.s3a.connection.ssl.enabled", str(config.MINIO_SECURE).lower()) \
-        .config("spark.sql.sources.partitionOverwriteMode", "dynamic") \
         .getOrCreate()
     return spark
 
@@ -98,11 +97,12 @@ def process_gold_layer():
     # =========================================================================
     try:
         # Try to read existing Gold data to find the latest processed date
+        # Use articles_serving as the source of truth for incremental processing
+        # so if the pipeline crashes midway, it won't falsely skip on retry
         existing_gold = spark.read.parquet(f"{gold_base_path}/articles_serving")
         max_date_row = existing_gold.agg({"publish_timestamp": "max"}).collect()[0]
         max_date = max_date_row[0] if max_date_row else None
-    except Exception as e:
-        logger.error(f"Failed to read existing Gold data: {e}")
+    except Exception:
         # Gold bucket or table might not exist yet
         max_date = None
 
@@ -213,17 +213,14 @@ def process_gold_layer():
     gold_serving_count = gold_articles_serving.count()
 
     logger.info("Writing gold_daily_trends...")
-    gold_daily_trends.write.mode("overwrite").partitionBy("publish_date").parquet(f"{gold_base_path}/daily_trends")
-    # gold_daily_trends.write.mode(write_mode).partitionBy("publish_date").parquet(f"{gold_base_path}/daily_trends")
+    gold_daily_trends.write.mode(write_mode).partitionBy("publish_date").parquet(f"{gold_base_path}/daily_trends")
     
     logger.info("Writing gold_articles_serving...")
     # Not partitioning articles by date to avoid small files and keep lookup fast by ID, but can partition if desired.
-    gold_articles_serving.write.mode("append").parquet(f"{gold_base_path}/articles_serving")
-    # gold_articles_serving.write.mode(write_mode).parquet(f"{gold_base_path}/articles_serving")
+    gold_articles_serving.write.mode(write_mode).parquet(f"{gold_base_path}/articles_serving")
     
     logger.info("Writing gold_entity_mentions...")
-    gold_entity_mentions.write.mode("overwrite").partitionBy("publish_date").parquet(f"{gold_base_path}/entity_mentions")
-    # gold_entity_mentions.write.mode(write_mode).partitionBy("publish_date").parquet(f"{gold_base_path}/entity_mentions")
+    gold_entity_mentions.write.mode(write_mode).partitionBy("publish_date").parquet(f"{gold_base_path}/entity_mentions")
 
     add_gold_records(gold_serving_count)
 

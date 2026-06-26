@@ -1,26 +1,11 @@
 import os
 import sys
-
-# CRITICAL FIX: OS-level redirect of STDOUT to STDERR!
-# Some C-level libraries (PyTorch, Rust tokenizers, etc) bypass Python's sys.stdout
-# and write directly to file descriptor 1 (STDOUT), which corrupts the MCP JSON-RPC pipe.
-# 1. Duplicate the original STDOUT (fd 1) so we can still use it for MCP
-original_stdout_fd = os.dup(1)
-true_stdout = os.fdopen(original_stdout_fd, 'w', encoding='utf-8')
-
-# 2. Redirect fd 1 to fd 2 (STDERR) at the OS level!
-os.dup2(2, 1)
-
-# 3. Also redirect Python's sys.stdout
-sys.stdout = sys.stderr
-
 import asyncio
 from typing import Any, List, Optional
 from mcp.server import Server, NotificationOptions
 from mcp.server.models import InitializationOptions
 import mcp.server.stdio
 import mcp.types as types
-import anyio
 
 # Ensure the project root is in the path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))
@@ -172,19 +157,8 @@ async def main():
     """Run the server using stdio transport"""
     logger.info("Starting Agentic Datalake MCP Server...")
     
-    # Pre-initialize heavy PyTorch models before starting anyio threads.
-    # PyTorch's C++ multi-threading and OpenMP initialization can disrupt
-    # the fragile anyio thread workers reading sys.stdin on Windows if 
-    # initialized dynamically in the middle of the event loop.
-    logger.info("Pre-loading semantic search models...")
-    retrieval._get_embedder()
-    logger.info("Model pre-loaded.")
-    
-    # Run the server over standard input/output using the safely preserved true_stdout
-    async_stdin = anyio.wrap_file(sys.stdin)
-    async_stdout = anyio.wrap_file(true_stdout)
-    
-    async with mcp.server.stdio.stdio_server(stdin=async_stdin, stdout=async_stdout) as (read_stream, write_stream):
+    # Run the server over standard input/output
+    async with mcp.server.stdio.stdio_server() as (read_stream, write_stream):
         await server.run(
             read_stream,
             write_stream,
