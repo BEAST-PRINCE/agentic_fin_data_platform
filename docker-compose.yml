@@ -83,13 +83,13 @@ services:
       - "7077:7077"
     volumes:
       - ./:/app
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: 1
-              capabilities: [gpu]
+#    deploy:
+#      resources:
+#        reservations:
+#          devices:
+#            - driver: nvidia
+#              count: 1
+#              capabilities: [gpu]
     networks:
       - datalake-net
 
@@ -112,13 +112,13 @@ services:
       - SPARK_SSL_ENABLED=no
     volumes:
       - ./:/app
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: 1
-              capabilities: [gpu]
+#    deploy:
+#      resources:
+#        reservations:
+#          devices:
+#            - driver: nvidia
+#              count: 1
+#              capabilities: [gpu]
     networks:
       - datalake-net
 

@@ -13,6 +13,9 @@ from src.serving.core.scraper_manager import scraper_manager
 from src.serving.core.pipeline_manager import pipeline_manager
 from src.common.logger import get_logger
 
+class ChatRequest(BaseModel):
+    message: str
+
 logger = get_logger(__name__)
 
 app = FastAPI(
@@ -32,6 +35,15 @@ async def startup_event():
     # This forces the lazy singleton to load in the main thread
     retrieval._get_embedder()
     logger.info("Embedding model initialized.")
+    
+    from src.common import config
+    if config.START_AGENT_ON_BOOT:
+        from src.serving.core.agent_manager import agent_manager
+        logger.info("START_AGENT_ON_BOOT is true. Initializing Agent Session...")
+        await agent_manager.initialize_session()
+        logger.info("Agent Session initialized.")
+    else:
+        logger.info("START_AGENT_ON_BOOT is false. Agent will lazily initialize on first chat.")
 
 @app.get("/health")
 async def health_check():
@@ -188,3 +200,26 @@ def get_top_entities(
 def get_available_dates():
     """Get all available dates with trending data."""
     return retrieval.fetch_available_dates()
+
+@app.post("/api/chat")
+async def chat_with_agent(request: ChatRequest):
+    """Interact with the Datalake Intelligence Agent (solo agent)."""
+    try:
+        from src.serving.core.agent_manager import agent_manager
+        reply = await agent_manager.chat(request.message)
+        return {"reply": reply, "agent": "solo"}
+    except Exception as e:
+        logger.error(f"Chat API error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/chat/multi")
+async def chat_with_multi_agent(request: ChatRequest):
+    """Interact with the multi-agent Financial Intelligence pipeline (independent from solo agent)."""
+    try:
+        from src.serving.core.multi_agent_manager import multi_agent_manager
+        reply = await multi_agent_manager.chat(request.message)
+        return {"reply": reply, "agent": "multi"}
+    except Exception as e:
+        logger.error(f"Multi-agent chat API error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
