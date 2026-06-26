@@ -203,11 +203,23 @@ def get_available_dates():
 
 @app.post("/api/chat")
 async def chat_with_agent(request: ChatRequest):
-    """Interact with the Datalake Intelligence Agent."""
+    """Interact with the Datalake Intelligence Agent (solo agent)."""
     try:
         from src.serving.core.agent_manager import agent_manager
         reply = await agent_manager.chat(request.message)
-        return {"reply": reply}
+        return {"reply": reply, "agent": "solo"}
     except Exception as e:
         logger.error(f"Chat API error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/chat/multi")
+async def chat_with_multi_agent(request: ChatRequest):
+    """Interact with the multi-agent Financial Intelligence pipeline (independent from solo agent)."""
+    try:
+        from src.serving.core.multi_agent_manager import multi_agent_manager
+        reply = await multi_agent_manager.chat(request.message)
+        return {"reply": reply, "agent": "multi"}
+    except Exception as e:
+        logger.error(f"Multi-agent chat API error: {e}")
         raise HTTPException(status_code=500, detail=str(e))

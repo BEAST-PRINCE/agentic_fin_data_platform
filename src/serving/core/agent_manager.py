@@ -5,6 +5,7 @@ from google.adk.tools.mcp_tool.mcp_toolset import StdioConnectionParams
 from google.adk import Agent, Runner
 from google.adk.tools import McpToolset
 from google.adk.sessions import InMemorySessionService
+from google.genai import types
 
 from src.common import config
 from src.common.logger import get_logger
@@ -41,15 +42,21 @@ class AgentManager:
         # Heavy components are lazily loaded
         pass
 
-    async def initialize_session(self):
+    async def initialize_agent(self):
         if self._initialized:
             return
             
         logger.info("Initializing AgentManager heavy components...")
+        import os
+        env = os.environ.copy()
+        env["TQDM_DISABLE"] = "1"
+        env["PYTHONUNBUFFERED"] = "1"
+        
         server_params = StdioConnectionParams(
             server_params=StdioServerParameters(
                 command=sys.executable,
-                args=[mcp_server_script]
+                args=[mcp_server_script],
+                env=env
             ),
             timeout=150
         )
@@ -73,8 +80,7 @@ class AgentManager:
             session_service=self.session_service
         )
         self._initialized = True
-
-    async def initialize_session(self):
+        
         try:
             await self.session_service.create_session(
                 app_name="DatalakeApp",
@@ -88,11 +94,34 @@ class AgentManager:
     async def chat(self, message: str) -> str:
         if not self._initialized:
             logger.info("Agent was not initialized on boot. Initializing now...")
-            await self.initialize_session()
+            await self.initialize_agent()
             
         try:
-            response = await self.runner.run_async(message, user_id="default_user", session_id="session_1")
-            return response.content
+            # Runner.run_async takes keyword arguments and returns an async generator
+            # The new_message must be a google.genai.types.Content object
+            content = types.Content(
+                role="user",
+                parts=[types.Part.from_text(text=message)]
+            )
+            
+            gen = self.runner.run_async(
+                user_id="default_user", 
+                session_id="session_1",
+                new_message=content
+            )
+            
+            full_response = ""
+            async for event in gen:
+                # ADK events store text in event.content.parts
+                if hasattr(event, "content") and event.content and hasattr(event.content, "parts"):
+                    for part in event.content.parts:
+                        if hasattr(part, "text") and part.text:
+                            full_response += part.text
+                    
+            if not full_response:
+                return "Agent processed the request but returned no text."
+                
+            return full_response
         except Exception as e:
             logger.error(f"Agent chat failed: {e}")
             return f"Error communicating with agent: {str(e)}"
