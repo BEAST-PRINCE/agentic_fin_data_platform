@@ -16,3 +16,7 @@ GOLD_RECORDS = Gauge("gold_records_total", "Total serving articles in Gold layer
 VECTOR_SEARCH_REQUESTS = Counter("vector_search_requests_total", "Total number of semantic search requests")
 VECTOR_SEARCH_LATENCY = Histogram("vector_search_latency_seconds", "Latency of semantic search requests in seconds")
 QDRANT_VECTORS_TOTAL = Gauge("qdrant_vectors_total", "Total vectors stored in Qdrant")
+
+# --- Agent Metrics ---
+AGENT_REQUESTS = Counter("agent_requests_total", "Total requests to the AI agents", ["agent_type"])
+AGENT_LATENCY = Histogram("agent_latency_seconds", "Latency of agent responses in seconds", ["agent_type"])
