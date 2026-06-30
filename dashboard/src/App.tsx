@@ -8,6 +8,8 @@ import { Database, Bot } from 'lucide-react';
 import { Routes, Route, Link } from 'react-router-dom';
 import { ArticleView } from './components/ArticleView';
 import { AgentChat } from './components/AgentChat';
+import { MultiAgentDashboard } from './components/MultiAgentDashboard';
+import { BrainCircuit } from 'lucide-react';
 
 function DashboardLayout() {
   return (
@@ -35,6 +37,11 @@ function DashboardLayout() {
             <Link to="/chat" className="flex items-center gap-2 px-4 py-2 bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/50 rounded-full transition-colors group cursor-pointer shadow-[0_0_15px_rgba(59,130,246,0.3)]">
               <Bot className="w-4 h-4 text-blue-400 group-hover:scale-110 transition-transform" />
               <span className="text-sm font-medium text-blue-300">Ask Intelligence Agent</span>
+            </Link>
+
+            <Link to="/multi-agent" className="flex items-center gap-2 px-4 py-2 bg-fuchsia-600/20 hover:bg-fuchsia-600/30 border border-fuchsia-500/50 rounded-full transition-colors group cursor-pointer shadow-[0_0_15px_rgba(217,70,239,0.3)]">
+              <BrainCircuit className="w-4 h-4 text-fuchsia-400 group-hover:scale-110 transition-transform" />
+              <span className="text-sm font-medium text-fuchsia-300">Multi-Agent System</span>
             </Link>
             
             <div className="flex items-center gap-2 px-4 py-2 bg-gray-800/40 border border-gray-700/50 rounded-full">
@@ -83,6 +90,7 @@ function App() {
       <Route path="/" element={<DashboardLayout />} />
       <Route path="/article/:articleId" element={<ArticleView />} />
       <Route path="/chat" element={<AgentChat />} />
+      <Route path="/multi-agent" element={<MultiAgentDashboard />} />
     </Routes>
   );
 }
