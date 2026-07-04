@@ -185,11 +185,15 @@ class ScraperManager:
                         self.log_buffers[name] = stats_buffer.copy()
                         
         stdout.close()
+        
+        p = self.active_processes.get(name)
+        if p:
+            p.wait()  # Wait for the process to fully exit to get the correct return code
+            
         self.running_flags[name] = False
         
-        # Check if the process exited with an error or without stats
-        p = self.active_processes.get(name)
-        if p and p.poll() != 0 and len(stats_buffer) == 0:
+        # Check if the process exited with an error
+        if p and p.returncode != 0 and len(stats_buffer) == 0:
             self.log_buffers[name].append("--- Scraper Error ---")
             self.log_buffers[name].append("The scraper crashed or exited unexpectedly.")
             self.log_buffers[name].append("Please check the 'scraper-logs' in MinIO or your backend terminal for the full stacktrace.")
@@ -199,30 +203,42 @@ class ScraperManager:
         client = self.minio_client.client
         buffer = []
         
+        def upload_buffer():
+            if not buffer:
+                return
+            timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+            object_name = f"{name}/{timestamp}.log"
+            log_data = "\\n".join(buffer).encode('utf-8')
+            
+            from io import BytesIO
+            try:
+                client.put_object(
+                    bucket_name=SCRAPER_LOGS_BUCKET,
+                    object_name=object_name,
+                    data=BytesIO(log_data),
+                    length=len(log_data),
+                    content_type="text/plain"
+                )
+                buffer.clear()
+            except Exception as e:
+                logger.error(f"Failed to upload logs to MinIO for {name}: {e}")
+
         while self.running_flags.get(name, False):
-            # Wait 25 seconds or until queue has items
-            time.sleep(25)
+            # Wait loop in 1 second chunks so we can exit quickly
+            for _ in range(25):
+                if not self.running_flags.get(name, False):
+                    break
+                time.sleep(1)
             
             while not self.log_queues[name].empty():
                 buffer.append(self.log_queues[name].get())
                 
-            if buffer:
-                timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
-                object_name = f"{name}/{timestamp}.log"
-                log_data = "\\n".join(buffer).encode('utf-8')
-                
-                from io import BytesIO
-                try:
-                    client.put_object(
-                        bucket_name=SCRAPER_LOGS_BUCKET,
-                        object_name=object_name,
-                        data=BytesIO(log_data),
-                        length=len(log_data),
-                        content_type="text/plain"
-                    )
-                    buffer.clear()
-                except Exception as e:
-                    logger.error(f"Failed to upload logs to MinIO for {name}: {e}")
+            upload_buffer()
+            
+        # Final flush after the process finishes
+        while not self.log_queues[name].empty():
+            buffer.append(self.log_queues[name].get())
+        upload_buffer()
 
     def get_logs(self, name: str) -> List[str]:
         """Return the latest log buffer."""
