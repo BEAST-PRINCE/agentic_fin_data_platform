@@ -34,12 +34,12 @@ function DashboardLayout() {
             </div>
           </div>
           <div className="flex items-center gap-4">
-            <Link to="/chat" className="flex items-center gap-2 px-4 py-2 bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/50 rounded-full transition-colors group cursor-pointer shadow-[0_0_15px_rgba(59,130,246,0.3)]">
+            <Link to="/chat" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-4 py-2 bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/50 rounded-full transition-colors group cursor-pointer shadow-[0_0_15px_rgba(59,130,246,0.3)]">
               <Bot className="w-4 h-4 text-blue-400 group-hover:scale-110 transition-transform" />
               <span className="text-sm font-medium text-blue-300">Ask Intelligence Agent</span>
             </Link>
 
-            <Link to="/multi-agent" className="flex items-center gap-2 px-4 py-2 bg-fuchsia-600/20 hover:bg-fuchsia-600/30 border border-fuchsia-500/50 rounded-full transition-colors group cursor-pointer shadow-[0_0_15px_rgba(217,70,239,0.3)]">
+            <Link to="/multi-agent" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-4 py-2 bg-fuchsia-600/20 hover:bg-fuchsia-600/30 border border-fuchsia-500/50 rounded-full transition-colors group cursor-pointer shadow-[0_0_15px_rgba(217,70,239,0.3)]">
               <BrainCircuit className="w-4 h-4 text-fuchsia-400 group-hover:scale-110 transition-transform" />
               <span className="text-sm font-medium text-fuchsia-300">Multi-Agent System</span>
             </Link>

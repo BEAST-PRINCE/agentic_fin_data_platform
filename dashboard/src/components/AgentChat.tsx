@@ -23,6 +23,10 @@ export function AgentChat() {
     scrollToBottom();
   }, [messages, isLoading]);
 
+  useEffect(() => {
+    document.title = "Intelligent-agent";
+  }, []);
+
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;
 

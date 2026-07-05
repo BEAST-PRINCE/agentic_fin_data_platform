@@ -72,6 +72,10 @@ export function MultiAgentDashboard() {
     scrollToBottom();
   }, [messages, isLoading]);
 
+  useEffect(() => {
+    document.title = "Multiagent";
+  }, []);
+
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;
 
@@ -102,7 +106,7 @@ export function MultiAgentDashboard() {
   return (
     <div className="min-h-screen bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-gray-900 via-gray-950 to-black text-gray-100 flex flex-col">
       {/* Header */}
-      <header className="flex items-center gap-4 p-6 border-b border-gray-800/60 bg-gray-950/50 backdrop-blur-md sticky top-0 z-10">
+      <header className="flex items-center gap-4 p-6 border-b border-gray-800/60 bg-gray-950/50 backdrop-blur-md sticky top-0 z-[60]">
         <Link to="/" className="p-2 hover:bg-gray-800 rounded-lg transition-colors text-gray-400 hover:text-white">
           <ArrowLeft className="w-5 h-5" />
         </Link>
