@@ -1,5 +1,5 @@
 aiohappyeyeballs==2.6.1
-aiohttp==3.13.5
+aiohttp==3.13.4
 aiosignal==1.4.0
 aiosqlite==0.22.1
 alembic==1.18.4
@@ -16,7 +16,7 @@ botocore==1.42.97
 certifi==2026.2.25
 cffi==2.0.0
 charset-normalizer==3.4.7
-click==8.3.3
+click==8.1.8
 cloudpickle==3.1.2
 colorama==0.4.6
 constantly==23.10.4
@@ -79,7 +79,7 @@ huggingface_hub==1.13.0
 hyperframe==6.1.0
 hyperlink==21.0.0
 idna==3.13
-importlib_metadata==8.7.1
+importlib_metadata==8.5.0
 Incremental==24.11.0
 itemadapter==0.13.1
 itemloaders==1.4.0
@@ -88,7 +88,7 @@ jiter==0.14.0
 jmespath==1.1.0
 joblib==1.5.3
 joserfc==1.6.4
-jsonschema==4.26.0
+jsonschema==4.23.0
 jsonschema-specifications==2025.9.1
 kafka-python==2.0.2
 kafka-python-ng==2.2.3
@@ -137,9 +137,9 @@ pyasn1==0.6.3
 pyasn1_modules==0.4.2
 pycparser==3.0
 pycryptodome==3.23.0
-pydantic==2.13.3
+pydantic==2.12.5
 pydantic-settings==2.14.0
-pydantic_core==2.46.3
+pydantic_core==2.41.5
 PyDispatcher==2.0.7
 pyee==13.0.1
 Pygments==2.20.0
@@ -148,7 +148,7 @@ pyOpenSSL==26.1.0
 pyparsing==3.3.2
 pyspark==3.5.1
 python-dateutil==2.9.0.post0
-python-dotenv==1.0.1
+python-dotenv==1.2.2
 python-multipart==0.0.27
 pywin32==311
 PyYAML==6.0.3
@@ -185,7 +185,7 @@ torch==2.6.0+cu124
 tqdm==4.67.3
 transformers==5.7.0
 Twisted==25.5.0
-typer==0.25.0
+typer==0.26.7
 typing-inspection==0.4.2
 typing_extensions==4.15.0
 tzdata==2026.2

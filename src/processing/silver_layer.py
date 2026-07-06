@@ -129,8 +129,8 @@ def process_silver_layer(sources: Optional[List[str]] = None):
     logger.info("Dropping records with nulls in critical fields (title, content, source)...")
     cleaned_df = df.dropna(subset=["title", "content", "source"])
 
-    logger.info("Filtering out articles with less than 10 words in content...")
-    cleaned_df = cleaned_df.filter(size(split(col("content"), " ")) >= 10)
+    logger.info("Filtering out articles with less than 60 words in content...")
+    cleaned_df = cleaned_df.filter(size(split(col("content"), " ")) >= 60)
 
     logger.info("Deduplicating records based on article_id...")
     cleaned_df = cleaned_df.dropDuplicates(["article_id"])
