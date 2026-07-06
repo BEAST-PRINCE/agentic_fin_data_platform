@@ -50,6 +50,7 @@ Executionplan.txt
 Phase7_Executionplan.txt
 Phase9_Executionplan.txt
 Prometheus+grafana_plan.txt
+multiagent_system_plan.md
 
 # Graphify
 graphify_project/
@@ -63,3 +64,6 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
+
+
+scratch/
