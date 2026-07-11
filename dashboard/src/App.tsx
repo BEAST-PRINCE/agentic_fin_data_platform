@@ -10,8 +10,13 @@ import { ArticleView } from './components/ArticleView';
 import { AgentChat } from './components/AgentChat';
 import { MultiAgentDashboard } from './components/MultiAgentDashboard';
 import { BrainCircuit } from 'lucide-react';
+import { useEffect } from 'react';
 
 function DashboardLayout() {
+  useEffect(() => {
+    document.title = "Dashboard";
+  }, []);
+
   return (
     <div className="min-h-screen bg-gray-950 text-gray-100 flex">
       {/* Sidebar Placeholder for Phase 9 */}

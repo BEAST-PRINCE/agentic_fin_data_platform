@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Send, Bot, User, ArrowLeft, BrainCircuit, Search, FileText, LineChart, MessageSquare } from 'lucide-react';
+import { Send, Bot, User, ArrowLeft, BrainCircuit, Search, FileText, LineChart, MessageSquare, ArrowDown } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 interface Message {
@@ -62,6 +62,7 @@ export function MultiAgentDashboard() {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [activeNode, setActiveNode] = useState<string | null>(null);
+  const [hoverY, setHoverY] = useState<number>(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -104,7 +105,7 @@ export function MultiAgentDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-gray-900 via-gray-950 to-black text-gray-100 flex flex-col">
+    <div className="h-screen bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-gray-900 via-gray-950 to-black text-gray-100 flex flex-col">
       {/* Header */}
       <header className="flex items-center gap-4 p-6 border-b border-gray-800/60 bg-gray-950/50 backdrop-blur-md sticky top-0 z-[60]">
         <Link to="/" className="p-2 hover:bg-gray-800 rounded-lg transition-colors text-gray-400 hover:text-white">
@@ -133,54 +134,58 @@ export function MultiAgentDashboard() {
       <main className="flex-1 flex overflow-hidden">
         
         {/* Left Panel: Flowchart */}
-        <div className="w-1/3 hidden lg:flex flex-col border-r border-gray-800/60 bg-gray-900/30 p-8 items-center justify-center relative z-20">
-          <h2 className="absolute top-8 left-8 text-lg font-semibold text-gray-300 tracking-wide uppercase">Agent Pipeline</h2>
+        <div className="w-1/3 min-w-[320px] hidden lg:flex flex-col border-r border-gray-800/60 bg-gray-900/30 z-20">
           
-          <div className="flex flex-col items-center mt-12 w-full max-w-sm">
-            {AGENT_PIPELINE.map((agent, idx) => (
-              <div key={agent.id} className="flex flex-col items-center w-full relative">
-                
-                {/* Node */}
-                <div 
-                  className={`w-full group relative flex items-center gap-4 p-4 rounded-xl border ${agent.border} ${agent.bg} backdrop-blur-sm shadow-lg transition-all duration-300 hover:scale-105 cursor-pointer z-10`}
-                  onMouseEnter={() => setActiveNode(agent.id)}
-                  onMouseLeave={() => setActiveNode(null)}
-                >
-                  <div className={`w-12 h-12 rounded-full flex items-center justify-center bg-gradient-to-br ${agent.color} shadow-lg shrink-0`}>
-                    <div className="text-white drop-shadow-md">
-                      {agent.icon}
+          {/* Solid Header Block attached to Main Header */}
+          <div className="w-full bg-gray-950 border-b border-gray-800 p-4 flex-shrink-0 z-30 shadow-md">
+            <h2 className="text-center text-sm font-bold text-transparent bg-clip-text bg-gradient-to-r from-gray-200 to-gray-400 tracking-widest uppercase">Agent Pipeline</h2>
+          </div>
+          
+          {/* Scrollable Flowchart Area (Scrollbar Hidden) */}
+          <div className="flex-1 overflow-y-auto p-8 relative [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+            <div className="flex flex-col items-center w-full max-w-[280px] mx-auto pb-16">
+              {AGENT_PIPELINE.map((agent, idx) => (
+                <div key={agent.id} className="flex flex-col items-center w-full relative">
+                  
+                  {/* Node */}
+                  <div 
+                    className={`w-full group relative flex items-center gap-4 p-4 rounded-xl border ${agent.border} ${agent.bg} backdrop-blur-sm shadow-lg transition-all duration-300 hover:scale-[1.02] cursor-pointer ${activeNode === agent.id ? 'z-40' : 'z-10'}`}
+                    onMouseEnter={(e) => {
+                      const rect = e.currentTarget.getBoundingClientRect();
+                      setHoverY(rect.top + rect.height / 2);
+                      setActiveNode(agent.id);
+                    }}
+                    onMouseLeave={() => setActiveNode(null)}
+                  >
+                    <div className={`w-12 h-12 rounded-full flex items-center justify-center bg-gradient-to-br ${agent.color} shadow-lg shrink-0`}>
+                      <div className="text-white drop-shadow-md">
+                        {agent.icon}
+                      </div>
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="font-bold text-gray-100 text-sm">{agent.name}</h3>
                     </div>
                   </div>
-                  <div className="flex-1">
-                    <h3 className="font-bold text-gray-100">{agent.name}</h3>
-                    
-                    {/* Hover Tooltip / Description */}
-                    <div className={`absolute z-50 left-[105%] top-1/2 -translate-y-1/2 w-64 p-4 rounded-lg bg-gray-900 border border-gray-700 shadow-2xl transition-all duration-300 ${activeNode === agent.id ? 'opacity-100 visible translate-x-0' : 'opacity-0 invisible -translate-x-4'}`}>
-                      <p className="text-sm text-gray-300 leading-relaxed">
-                        {agent.description}
-                      </p>
-                      {/* Triangle pointer */}
-                      <div className="absolute top-1/2 -left-2 -translate-y-1/2 w-4 h-4 bg-gray-900 border-l border-b border-gray-700 rotate-45"></div>
-                    </div>
-                  </div>
-                </div>
 
-                {/* Connecting Line */}
-                {idx < AGENT_PIPELINE.length - 1 && (
-                  <div className="w-1 h-12 relative my-1">
-                    <div className="absolute inset-0 bg-gray-700 rounded-full"></div>
-                    {isLoading && (
-                      <div className="absolute top-0 w-full h-full bg-gradient-to-b from-transparent via-fuchsia-500 to-transparent animate-pulse rounded-full opacity-70"></div>
-                    )}
-                  </div>
-                )}
-              </div>
-            ))}
+                  {/* Connecting Line with Solid Arrow Head */}
+                  {idx < AGENT_PIPELINE.length - 1 && (
+                    <div className="flex flex-col items-center my-1 z-0 relative">
+                      <div className="w-1 h-10 bg-gray-700/80 rounded-t-full relative">
+                        {isLoading && (
+                        <div className="absolute top-0 w-full h-full bg-gradient-to-b from-transparent via-fuchsia-500 to-transparent animate-pulse rounded-full opacity-70"></div>
+                      )}
+                      </div>
+                      <div className="w-0 h-0 border-l-[6px] border-r-[6px] border-t-[8px] border-l-transparent border-r-transparent border-t-gray-700/80"></div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
         </div>
 
         {/* Right Panel: Chat Area */}
-        <div className="flex-1 flex flex-col h-full relative">
+        <div className="flex-1 flex flex-col h-full relative overflow-hidden bg-gray-950/20">
           <div className="flex-1 overflow-y-auto p-4 md:p-8">
             <div className="max-w-4xl mx-auto space-y-6">
               {messages.map((msg, idx) => (
@@ -270,8 +275,29 @@ export function MultiAgentDashboard() {
             </div>
           </div>
         </div>
-
       </main>
+
+      {/* Global Viewport-Relative Tooltip (Breaks out of all containers) */}
+      {activeNode && AGENT_PIPELINE.map(agent => agent.id === activeNode && (
+        <div 
+          key={`tooltip-${agent.id}`}
+          className={`fixed z-[200] w-[320px] p-5 rounded-xl bg-gray-950/95 backdrop-blur-xl border ${agent.border} shadow-[0_0_40px_rgba(0,0,0,0.8)] transition-all duration-150 pointer-events-none`}
+          style={{ 
+            top: `${hoverY}px`, 
+            left: 'calc(33.333333% + 20px)', 
+            transform: 'translateY(-50%)'
+          }}
+        >
+          <div className="!border-0"> 
+            <h4 className="font-bold text-gray-100 mb-2">{agent.name}</h4>
+            <p className="text-sm text-gray-300 leading-relaxed">{agent.description}</p>
+            {/* Pointer arrow */}
+            <div 
+              className={`absolute top-1/2 -left-2 -translate-y-1/2 w-4 h-4 bg-gray-950 border-l border-b ${agent.border} rotate-45`}
+            ></div>
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
