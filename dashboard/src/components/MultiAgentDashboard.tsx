@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
-import { Send, Bot, User, ArrowLeft, BrainCircuit, Search, FileText, LineChart, MessageSquare, ArrowDown } from 'lucide-react';
+import { Send, Bot, User, ArrowLeft, BrainCircuit, Search, FileText, LineChart, MessageSquare, ArrowDown, FileDown } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { generatePDF } from '../utils/pdfGenerator';
+import { PDFProgressOverlay } from './PDFProgressOverlay';
 
 interface Message {
   role: 'user' | 'agent';
@@ -63,6 +65,9 @@ export function MultiAgentDashboard() {
   const [isLoading, setIsLoading] = useState(false);
   const [activeNode, setActiveNode] = useState<string | null>(null);
   const [hoverY, setHoverY] = useState<number>(0);
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
+  const [pdfProgress, setPdfProgress] = useState(0);
+  const pdfAbortRef = useRef(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -104,8 +109,34 @@ export function MultiAgentDashboard() {
     }
   };
 
+  const handleExportPDF = async () => {
+    setIsGeneratingPDF(true);
+    setPdfProgress(0);
+    pdfAbortRef.current = false;
+
+    try {
+      await generatePDF({
+        messages,
+        agentMode: 'Multi-Agent',
+        onProgress: setPdfProgress,
+        abortRef: pdfAbortRef
+      });
+    } catch (err) {
+      console.error("PDF generation failed", err);
+    } finally {
+      setIsGeneratingPDF(false);
+    }
+  };
+
   return (
     <div className="h-screen bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-gray-900 via-gray-950 to-black text-gray-100 flex flex-col">
+      {isGeneratingPDF && (
+        <PDFProgressOverlay 
+          progress={pdfProgress} 
+          onCancel={() => { pdfAbortRef.current = true; }} 
+        />
+      )}
+      
       {/* Header */}
       <header className="flex items-center gap-4 p-6 border-b border-gray-800/60 bg-gray-950/50 backdrop-blur-md sticky top-0 z-[60]">
         <Link to="/" className="p-2 hover:bg-gray-800 rounded-lg transition-colors text-gray-400 hover:text-white">
@@ -127,6 +158,17 @@ export function MultiAgentDashboard() {
               <span className="text-xs text-emerald-400 font-medium tracking-wider uppercase">Pipeline Ready</span>
             </div>
           </div>
+        </div>
+
+        <div className="ml-auto">
+          <button
+            onClick={handleExportPDF}
+            disabled={isGeneratingPDF || messages.length === 0}
+            className="flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg transition-colors text-sm font-medium border border-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <FileDown className="w-4 h-4" />
+            Export PDF
+          </button>
         </div>
       </header>
 
