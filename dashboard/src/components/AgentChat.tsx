@@ -114,7 +114,7 @@ export function AgentChat() {
             className="flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg transition-colors text-sm font-medium border border-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <FileDown className="w-4 h-4" />
-            Export PDF
+            Generate PDF Report
           </button>
         </div>
       </header>
