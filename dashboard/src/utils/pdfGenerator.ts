@@ -120,53 +120,77 @@ export const generatePDF = async ({ messages, agentMode, onProgress, abortRef }:
       }
     }
     
-    // Calculate total height of this message bubble
-    let messageHeight = padding * 2; // top and bottom padding
-    parsedLines.forEach(l => {
-      // rough height estimation based on font size (1 pt = ~0.35 mm)
-      messageHeight += (l.size * 0.35) * 1.5; 
-    });
+    // Segment the message into chunks that fit on the current page
+    let linesRemaining = [...parsedLines];
 
-    // Page break logic
-    if (currentY + messageHeight + 10 > pageHeight - bottomMargin) {
-      drawFooter();
-      doc.addPage();
-      currentPage++;
-      currentY = topMargin;
-    }
+    while (linesRemaining.length > 0) {
+      if (abortRef.current) {
+        console.log('PDF Generation aborted by user.');
+        return;
+      }
 
-    // Draw Bubble
-    const bubbleX = isUser ? pageWidth - margin - bubbleMaxWidth : margin;
-    
-    if (isUser) {
-      doc.setFillColor(219, 234, 254); // bg-blue-100
-      doc.setDrawColor(191, 219, 254); // border-blue-200
-    } else {
-      doc.setFillColor(243, 244, 246); // bg-gray-100
-      doc.setDrawColor(229, 231, 235); // border-gray-200
+      let spaceLeft = pageHeight - bottomMargin - currentY - (padding * 2);
+
+      // If less than 15mm left (approx 3 lines), break to new page early to avoid awkward tiny slices
+      if (spaceLeft < 15) {
+        drawFooter();
+        doc.addPage();
+        currentPage++;
+        currentY = topMargin;
+        spaceLeft = pageHeight - bottomMargin - currentY - (padding * 2);
+      }
+
+      const linesForThisPage = [];
+      let heightForThisPage = 0;
+
+      for (const line of linesRemaining) {
+        const lh = (line.size * 0.35) * 1.5;
+        // Always push at least one line to prevent infinite loops if a line is weirdly tall
+        if (heightForThisPage === 0 || heightForThisPage + lh <= spaceLeft) {
+          linesForThisPage.push(line);
+          heightForThisPage += lh;
+        } else {
+          break;
+        }
+      }
+
+      linesRemaining = linesRemaining.slice(linesForThisPage.length);
+
+      // Draw Segment Bubble
+      const totalBubbleHeight = heightForThisPage + (padding * 2);
+      const bubbleX = isUser ? pageWidth - margin - bubbleMaxWidth : margin;
+
+      if (isUser) {
+        doc.setFillColor(219, 234, 254);
+        doc.setDrawColor(191, 219, 254);
+      } else {
+        doc.setFillColor(243, 244, 246);
+        doc.setDrawColor(229, 231, 235);
+      }
+
+      doc.roundedRect(bubbleX, currentY, bubbleMaxWidth, totalBubbleHeight, 3, 3, 'FD');
+
+      // Draw Text for this segment
+      let textY = currentY + padding + 4;
+      for (const pline of linesForThisPage) {
+        doc.setFont(pline.font, pline.style);
+        doc.setFontSize(pline.size);
+        doc.setTextColor(pline.textColor[0], pline.textColor[1], pline.textColor[2]);
+        const textX = bubbleX + padding;
+        doc.text(pline.text, textX, textY);
+        textY += (pline.size * 0.35) * 1.5;
+      }
+
+      currentY += totalBubbleHeight + 6;
+
+      // Force a page break if there are still lines left for this message
+      if (linesRemaining.length > 0) {
+        drawFooter();
+        doc.addPage();
+        currentPage++;
+        currentY = topMargin;
+      }
     }
-    
-    doc.roundedRect(bubbleX, currentY, bubbleMaxWidth, messageHeight, 3, 3, 'FD');
-    
-    // Draw Text
-    let textY = currentY + padding + 4; // +4 for font baseline adjustment
-    
-    for (const pline of parsedLines) {
-      doc.setFont(pline.font, pline.style);
-      doc.setFontSize(pline.size);
-      doc.setTextColor(pline.textColor[0], pline.textColor[1], pline.textColor[2]);
-      
-      // Calculate text X
-      // If user, we right-align the text inside the bubble
-      // Wait, standard right-aligned chat means the bubble is on the right, but text inside is usually left-aligned.
-      // Let's keep text left-aligned inside the bubble for readability, but the bubble itself is on the right!
-      const textX = bubbleX + padding;
-      
-      doc.text(pline.text, textX, textY);
-      textY += (pline.size * 0.35) * 1.5;
-    }
-    
-    currentY += messageHeight + 6;
 
     // Report Progress
     const percent = Math.round(((i + 1) / messages.length) * 100);
