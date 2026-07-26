@@ -216,8 +216,13 @@ async def chat_with_agent(request: ChatRequest):
         
         latency = time.time() - start_time
         AGENT_LATENCY.labels(agent_type="solo").observe(latency)
+        execution_time_ms = max(10, int(latency * 1000))
         
-        return {"reply": reply, "agent": "solo"}
+        return {
+            "reply": reply,
+            "agent": "solo",
+            "execution_time_ms": execution_time_ms
+        }
     except Exception as e:
         logger.error(f"Chat API error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -233,12 +238,23 @@ async def chat_with_multi_agent(request: ChatRequest):
     
     try:
         from src.serving.core.multi_agent_manager import multi_agent_manager
-        reply = await multi_agent_manager.chat(request.message)
+        result = await multi_agent_manager.chat(request.message)
+        
+        if isinstance(result, dict):
+            reply = result.get("reply", "")
+            workflow_steps = result.get("workflow_steps", [])
+        else:
+            reply = str(result)
+            workflow_steps = []
         
         latency = time.time() - start_time
         AGENT_LATENCY.labels(agent_type="multi").observe(latency)
         
-        return {"reply": reply, "agent": "multi"}
+        return {
+            "reply": reply,
+            "workflow_steps": workflow_steps,
+            "agent": "multi"
+        }
     except Exception as e:
         logger.error(f"Multi-agent chat API error: {e}")
         raise HTTPException(status_code=500, detail=str(e))

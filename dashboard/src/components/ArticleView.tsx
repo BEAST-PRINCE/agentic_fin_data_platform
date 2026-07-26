@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, Clock, Globe, Code, FileText, Loader2 } from 'lucide-react';
+import { ArrowLeft, Clock, Globe, Code, FileText, Loader2, Sparkles } from 'lucide-react';
 
 interface FullArticle {
   article_id: string;

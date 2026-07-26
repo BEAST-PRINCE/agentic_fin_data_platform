@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Send, Bot, User, ArrowLeft, FileDown } from 'lucide-react';
+import { Send, Bot, User, ArrowLeft, FileDown, Clock } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { generatePDF } from '../utils/pdfGenerator';
 import { PDFProgressOverlay } from './PDFProgressOverlay';
@@ -7,6 +7,7 @@ import { PDFProgressOverlay } from './PDFProgressOverlay';
 interface Message {
   role: 'user' | 'agent';
   content: string;
+  executionTimeMs?: number;
 }
 
 export function AgentChat() {
@@ -50,7 +51,14 @@ export function AgentChat() {
       if (!res.ok) throw new Error('Failed to get response');
       const data = await res.json();
       
-      setMessages(prev => [...prev, { role: 'agent', content: data.reply }]);
+      setMessages(prev => [
+        ...prev, 
+        { 
+          role: 'agent', 
+          content: data.reply,
+          executionTimeMs: data.execution_time_ms 
+        }
+      ]);
     } catch (error) {
       console.error(error);
       setMessages(prev => [...prev, { role: 'agent', content: 'Sorry, I encountered an error communicating with the datalake tools.' }]);
@@ -138,6 +146,13 @@ export function AgentChat() {
                 <div className="prose prose-invert max-w-none">
                   <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed">{msg.content}</pre>
                 </div>
+
+                {msg.role === 'agent' && msg.executionTimeMs !== undefined && (
+                  <div className="mt-3 border-t border-gray-700/40 pt-2 flex items-center justify-end gap-1.5 text-[11px] text-gray-400 font-mono">
+                    <Clock className="w-3 h-3 text-blue-400" />
+                    <span>Execution time: {msg.executionTimeMs} ms</span>
+                  </div>
+                )}
               </div>
 
               {msg.role === 'user' && (

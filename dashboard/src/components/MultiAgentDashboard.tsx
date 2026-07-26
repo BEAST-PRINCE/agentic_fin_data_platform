@@ -1,12 +1,14 @@
 import { useState, useRef, useEffect } from 'react';
-import { Send, Bot, User, ArrowLeft, BrainCircuit, Search, FileText, LineChart, MessageSquare, ArrowDown, FileDown } from 'lucide-react';
+import { Send, User, ArrowLeft, BrainCircuit, Search, FileText, LineChart, MessageSquare, FileDown } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { generatePDF } from '../utils/pdfGenerator';
 import { PDFProgressOverlay } from './PDFProgressOverlay';
+import { AgentWorkflowAccordion, type WorkflowStep } from './AgentWorkflowAccordion';
 
 interface Message {
   role: 'user' | 'agent';
   content: string;
+  workflowSteps?: WorkflowStep[];
 }
 
 const AGENT_PIPELINE = [
@@ -100,7 +102,14 @@ export function MultiAgentDashboard() {
       if (!res.ok) throw new Error('Failed to get response');
       const data = await res.json();
       
-      setMessages(prev => [...prev, { role: 'agent', content: data.reply }]);
+      setMessages(prev => [
+        ...prev, 
+        { 
+          role: 'agent', 
+          content: data.reply,
+          workflowSteps: data.workflow_steps 
+        }
+      ]);
     } catch (error) {
       console.error(error);
       setMessages(prev => [...prev, { role: 'agent', content: 'Sorry, the agent team encountered an error during their analysis.' }]);
@@ -246,6 +255,10 @@ export function MultiAgentDashboard() {
                     <div className="prose prose-invert max-w-none">
                       <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed">{msg.content}</pre>
                     </div>
+
+                    {msg.role === 'agent' && msg.workflowSteps && (
+                      <AgentWorkflowAccordion steps={msg.workflowSteps} />
+                    )}
                   </div>
 
                   {msg.role === 'user' && (
