@@ -1,5 +1,7 @@
 import os
 import sys
+import time
+import uuid
 from mcp.client.stdio import StdioServerParameters
 from google.adk.tools.mcp_tool.mcp_toolset import StdioConnectionParams
 from google.adk import Agent, Runner
@@ -93,12 +95,20 @@ class AgentManager:
 
     async def chat(self, message: str) -> str:
         if not self._initialized:
-            logger.info("Agent was not initialized on boot. Initializing now...")
+            logger.info("[SoloAgent] Agent was not initialized on boot. Initializing now...")
             await self.initialize_agent()
             
+        start_time = time.time()
+        session_id = f"solo_session_{uuid.uuid4().hex}"
+        
         try:
-            # Runner.run_async takes keyword arguments and returns an async generator
-            # The new_message must be a google.genai.types.Content object
+            await self.session_service.create_session(
+                app_name="DatalakeApp",
+                user_id="default_user",
+                session_id=session_id
+            )
+            logger.info(f"[SoloAgent] Processing prompt: '{message[:80]}...' | Session: {session_id}")
+            
             content = types.Content(
                 role="user",
                 parts=[types.Part.from_text(text=message)]
@@ -106,24 +116,35 @@ class AgentManager:
             
             gen = self.runner.run_async(
                 user_id="default_user", 
-                session_id="session_1",
+                session_id=session_id,
                 new_message=content
             )
             
             full_response = ""
+            event_count = 0
             async for event in gen:
+                event_count += 1
+                author = getattr(event, "author", "SoloResearcher")
+                
                 # ADK events store text in event.content.parts
                 if hasattr(event, "content") and event.content and hasattr(event.content, "parts"):
                     for part in event.content.parts:
                         if hasattr(part, "text") and part.text:
                             full_response += part.text
-                    
+                        elif hasattr(part, "function_call") and part.function_call:
+                            logger.info(f"[SoloAgent Step] Tool Call requested by model: {part.function_call.name}")
+                        elif hasattr(part, "function_response") and part.function_response:
+                            logger.info(f"[SoloAgent Step] Tool Response received for: {part.function_response.name}")
+
+            elapsed_ms = int((time.time() - start_time) * 1000)
             if not full_response:
+                logger.warn(f"[SoloAgent Completed] Processed request in {elapsed_ms} ms ({event_count} events) but returned empty text.")
                 return "Agent processed the request but returned no text."
                 
+            logger.info(f"[SoloAgent Completed] Responded in {elapsed_ms} ms ({event_count} events) | Response length: {len(full_response)} chars")
             return full_response
         except Exception as e:
-            logger.error(f"Agent chat failed: {e}")
+            logger.error(f"[SoloAgent Error] Chat failed: {e}", exc_info=True)
             return f"Error communicating with agent: {str(e)}"
 
 agent_manager = AgentManager()

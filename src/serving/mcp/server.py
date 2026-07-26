@@ -125,6 +125,9 @@ async def handle_call_tool(
     if not arguments:
         arguments = {}
 
+    logger.info(f"[MCP Tool Execution] Tool: '{name}' | Arguments: {arguments}")
+    start_time = asyncio.get_event_loop().time()
+
     try:
         if name == "get_article_by_id":
             article_id = arguments.get("article_id")
@@ -133,9 +136,12 @@ async def handle_call_tool(
             
             result = retrieval.fetch_article_by_id(article_id)
             if not result:
-                return [types.TextContent(type="text", text=f"Article not found for ID: {article_id}")]
+                res_text = f"Article not found for ID: {article_id}"
+            else:
+                res_text = str(result)
                 
-            return [types.TextContent(type="text", text=str(result))]
+            logger.info(f"[MCP Tool Completed] Tool: '{name}' | Returned {len(res_text)} chars")
+            return [types.TextContent(type="text", text=res_text)]
 
         elif name == "retrieve_articles":
             keyword = arguments.get("keyword", "")
@@ -143,8 +149,11 @@ async def handle_call_tool(
             
             try:
                 results = retrieval.semantic_search(keyword, limit)
-                return [types.TextContent(type="text", text=str(results) if results else "No articles found.")]
+                res_text = str(results) if results else "No articles found."
+                logger.info(f"[MCP Tool Completed] Tool: '{name}' | Found {len(results) if results else 0} articles ({len(res_text)} chars)")
+                return [types.TextContent(type="text", text=res_text)]
             except Exception as e:
+                logger.error(f"[MCP Tool Error] Tool: '{name}' | Error: {e}")
                 return [types.TextContent(type="text", text=f"Semantic Search failed: {e}")]
 
         elif name == "get_daily_trends":
@@ -152,20 +161,24 @@ async def handle_call_tool(
             end_date = arguments.get("end_date")
             
             results = retrieval.fetch_daily_trends(start_date, end_date)
-            return [types.TextContent(type="text", text=str(results) if results else "No trends found for range.")]
+            res_text = str(results) if results else "No trends found for range."
+            logger.info(f"[MCP Tool Completed] Tool: '{name}' | Returned {len(res_text)} chars")
+            return [types.TextContent(type="text", text=res_text)]
 
         elif name == "get_top_entities":
             publish_date = arguments.get("publish_date")
             limit = arguments.get("limit", 10)
             
             results = retrieval.fetch_top_entities(publish_date, limit)
-            return [types.TextContent(type="text", text=str(results) if results else f"No entities found for {publish_date}")]
+            res_text = str(results) if results else f"No entities found for {publish_date}"
+            logger.info(f"[MCP Tool Completed] Tool: '{name}' | Returned {len(res_text)} chars")
+            return [types.TextContent(type="text", text=res_text)]
 
         else:
             raise ValueError(f"Unknown tool: {name}")
 
     except Exception as e:
-        logger.error(f"Error executing tool {name}: {str(e)}")
+        logger.error(f"[MCP Tool Error] Tool {name}: {str(e)}")
         return [types.TextContent(type="text", text=f"Error executing tool {name}: {str(e)}")]
 
 async def main():
