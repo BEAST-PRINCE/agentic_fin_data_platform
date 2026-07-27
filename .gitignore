@@ -53,6 +53,8 @@ Prometheus+grafana_plan.txt
 multiagent_system_plan.md
 PDF_execution_plan.md
 Plan.md
+Documentation_Files_List.md
+Documentation_Plan.md
 
 # Graphify
 graphify_project/
@@ -69,3 +71,5 @@ pnpm-debug.log*
 
 
 scratch/
+CHANGELOG.md
+CONTRIBUTING.md
