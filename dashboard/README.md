@@ -1,73 +1,31 @@
-# React + TypeScript + Vite
+# Dashboard (`dashboard/`)
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+## 🖥️ Why does this folder exist?
 
-Currently, two official plugins are available:
+This is the face of the Agentic Datalake. Having an incredibly powerful multi-agent AI pipeline and a blazing-fast Lakehouse is great, but without a good user interface, it's just text flashing on a terminal. I built this React dashboard to provide a beautiful, interactive window into the system. It's designed to make interrogating complex financial data feel as easy as chatting with a colleague.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## 🎨 Responsibilities & Internal Structure
 
-## React Compiler
+This folder is a standard React application. 
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+Key responsibilities include:
+* **The Chat Interface:** The primary way users interact with the agents. It handles streaming responses and markdown rendering.
+* **Agent Workflow Viewer:** An interactive accordion UI that exposes the "inner monologue" of the multi-agent system. Instead of just seeing the final answer, users can click in and see exactly what the Planner, Researcher, and Analyst did to arrive at that conclusion.
+* **Data Visualization:** Rendering charts and graphs based on structured data returned by DuckDB through the API.
+* **System Health:** Displaying top-level metrics on Lakehouse data volume and pipeline status.
 
-## Expanding the ESLint configuration
+## 🔄 Data Flow
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+`User Input` ➔ `React State` ➔ `FastAPI (src/serving/)` ➔ *(Agents do their thing)* ➔ `FastAPI Response` ➔ `React Component Renders`
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+## 🔌 Dependencies & Extension Points
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+* **Dependencies:** Built with React (usually via Vite or Next.js), using modern styling (Tailwind CSS or styled-components). It relies heavily on the FastAPI endpoints running in the backend.
+* **Extension Points:** 
+  * Want to add a new chart for stock volatility? Create a new component in the `components/` subfolder, wire it up to a new API endpoint, and drop it onto the dashboard layout.
+  * Integrating PDF exports will likely require a new "Export" component here that triggers the backend PDF generation service.
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+## 🐛 Debugging Tips
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
-
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+* **CORS Errors:** If the dashboard suddenly refuses to talk to the backend, open the browser console. If you see a CORS (Cross-Origin Resource Sharing) error, ensure the FastAPI backend is configured to accept requests from the exact port the dashboard is running on (usually `http://localhost:3000` or `5173`).
+* **Blank Screen / React Crash:** If the UI breaks completely when an agent responds, check the Markdown rendering component. Agents sometimes hallucinate weird markdown (like unclosed code blocks or nested tables) that can break strict React renderers.
