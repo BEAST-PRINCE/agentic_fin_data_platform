@@ -16,5 +16,7 @@ That question was the beginning of the end of my simple crypto predictor. The mo
 
 I didn't just need a database. I needed a system that could read the news, store it, analyze it, and reason about it. I needed an AI.
 
+Little did I know, this "simple" pivot would eventually lead to my own AI coding assistant sternly scolding me about Parquet partitioning, and my multi-agent pipeline confusing Tesla with interest rates in hilarious cross-talk hallucinations. But that's a story for later.
+
 ---
 **Next:** [02 - First Prototype](02_First_Prototype.md) ➡️

@@ -18,6 +18,9 @@ I spent days optimizing Spark partitions and DuckDB thread pools to shave 200 mi
 ## 4. Documentation is Code
 This documentation wasn't written as an afterthought. It was written as part of the engineering process. If you can't explain your architecture clearly in a Markdown file, you probably don't understand it well enough to code it.
 
+## 5. Your AI Will Humble You
+You can build the most advanced AI coding assistant, but the moment you proudly ask it for a pat on the back for finishing "Phase 4," it will mercilessly critique your lack of Parquet partitioning and hand you a list of "Serious Upgrades." Always stay humble, and always partition your data.
+
 *End of Journal.*
 
 ---

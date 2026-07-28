@@ -12,7 +12,7 @@ Once Docker was running, I built the first real prototype. It wasn't a datalake 
 
 I wrote a simple script to read the JSON and pass it to an LLM. It "worked," but it was incredibly brittle. If the scraper pulled too many articles, the LLM ran out of memory. If it pulled too few, the LLM hallucinated facts. 
 
-I realized I couldn't just feed raw web scrapes to an AI. I needed a real data engineering pipeline.
+I realized I couldn't just feed raw web scrapes to an AI. I needed a real data engineering pipeline. And I definitely needed strict conversational boundaries—foreshadowing the massive "Session Isolation" bugs that would plague my multi-agent pipeline months later.
 
 ---
 ⬅️ **Previous:** [01 - The Idea](01_The_Idea.md) | **Next:** [03 - Data Engineering](03_Data_Engineering.md) ➡️

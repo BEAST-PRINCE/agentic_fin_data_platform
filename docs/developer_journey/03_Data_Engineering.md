@@ -20,5 +20,21 @@ It was silently reprocessing the entire historical Bronze bucket every single ti
 
 That was a hard lesson in the dangers of `try...except pass` in data engineering.
 
+## The "Serious Upgrades"
+
+Eventually, I reached the end of the Phase 4 execution plan. The Gold layer was officially built. My PySpark job was happily churning out aggregations, everything was landing in the `gold` MinIO bucket, and the script was executing flawlessly. 
+
+I felt like a true Data Engineering god. I sat back in my chair, opened my AI coding agent, and proudly asked:
+
+*"Is the Phase 4 fully complete as per the execution plan?? Check if anything is left or any serious upgrade that needs to be done."*
+
+I fully expected a digital pat on the back. Instead, my own AI agent effectively looked at my flat Parquet files, sighed, and told me that while it was technically "complete," it wasn't exactly "industry-grade." 
+
+It handed me a list of "Serious Upgrades." 
+
+The biggest offender? **Data Partitioning**. I was dumping everything into massive, unpartitioned Parquet files. The AI politely informed me that if I didn't partition the Gold tables by `publish_date`, DuckDB was going to choke on full-table scans the moment the dataset grew. 
+
+It was a humbling moment. You build a state-of-the-art AI Datalake, and the very AI you built it with tells you that you forgot basic Hive-style partitioning. I immediately went back to the drawing board, implemented strategic partitioning for the aggregate tables, but stubbornly left `gold_articles_serving` unpartitioned just to ensure my point-lookups (by UUID) stayed fast. Take that, AI.
+
 ---
 ⬅️ **Previous:** [02 - First Prototype](02_First_Prototype.md) | **Next:** [04 - Lakehouse](04_Lakehouse.md) ➡️

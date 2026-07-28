@@ -16,7 +16,7 @@ It turns out that PyTorch (which powers the embeddings) uses a C++ threading lib
 
 The fix was deceptively simple: I had to move the model initialization to the main thread during FastAPI's `@app.on_event("startup")` hook. By loading the heavy C-level ML libraries before any async workers were spawned, the deadlock disappeared. 
 
-I also integrated KeyBERT to extract semantic keywords during the Spark Gold job. Running row-by-row Python UDFs was too slow, so I learned how to use PySpark's `pandas_udf` to feed chunks of the dataset into KeyBERT, letting it run batch processing on the GPU. The semantic pipeline was finally optimized.
+I also integrated KeyBERT to extract semantic keywords during the Spark Gold job. Running row-by-row Python UDFs was too slow, so I learned how to use PySpark's `pandas_udf` to feed chunks of the dataset into KeyBERT, letting it run batch processing on the GPU. The semantic pipeline was finally optimized. (Which was absolutely necessary, considering I'd later discover the LLMs would take 25 seconds to read it all anyway, forcing me to build a fancy UI accordion just to distract the user from the latency).
 
 ---
 ⬅️ **Previous:** [04 - Lakehouse](04_Lakehouse.md) | **Next:** [06 - Multi-Agent System](06_Multi_Agent.md) ➡️

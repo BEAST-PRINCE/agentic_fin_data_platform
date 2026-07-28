@@ -14,7 +14,9 @@ MCP was a game changer. I wrapped my database queries in an MCP server running o
 
 For orchestration, I adopted the **Google Agentic Development Kit (ADK)**. It had native MCP support and was much cleaner than LangChain. 
 
-I finally settled on a strict 5-agent pipeline: Planner -> Researcher -> Summarizer -> Analyst -> Synthesizer. To prevent the LLMs from getting confused by conversational text, I forced the intermediate agents to communicate exclusively using strict JSON schemas. The Multi-Agent system was finally stable, and highly accurate.
+I finally settled on a strict 5-agent pipeline: Planner -> Researcher -> Summarizer -> Analyst -> Synthesizer. To prevent the LLMs from getting confused by conversational text, I forced the intermediate agents to communicate exclusively using strict JSON schemas. The Multi-Agent system was finally stable, and highly accurate. 
+
+Of course, I didn't realize until much later that dumping 50 lines of this raw, non-human-readable JSON directly into the final chat UI was going to look like a terrible matrix code glitch. But the backend, at least, was working.
 
 ---
 ⬅️ **Previous:** [05 - Vector Search](05_Vector_Search.md) | **Next:** [07 - Observability](07_Observability.md) ➡️
