@@ -58,11 +58,22 @@ I've put together a comprehensive, step-by-step guide to get everything running 
 👉 **[Read the Installation Guide](docs/00_Installation_Guide.md)**
 
 ### 3. Spin it up!
-Once you're set up, it's as simple as:
+Once you're set up, you need to run both the FastAPI server and the React dashboard simultaneously:
+
+**Terminal 1 (Backend):**
 ```bash
 docker-compose up -d
+cd src/serving/api
+uvicorn main:app --reload --port 8000
 ```
-Then visit `http://localhost:3000` to meet your new AI data team.
+
+**Terminal 2 (Frontend):**
+```bash
+cd dashboard
+npm run dev
+```
+
+Then visit `http://localhost:5173` in your browser to meet your new AI data team and experience the dashboard!
 
 ---
 
