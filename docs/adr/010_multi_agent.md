@@ -26,6 +26,7 @@ Crucially, the intermediate agents (1 through 4) communicate *exclusively* via s
 ## 📈 Consequences
 * **Positive:** Incredible reliability. Because the Planner only has to write a plan (and doesn't have to worry about formatting a final report), it rarely makes mistakes.
 * **Positive:** Context window management. By inserting the Summarizer agent between the Researcher and the Analyst, I drastically reduce the token count, allowing the Analyst to reason clearly without getting lost in the noise of 50 raw articles.
+* **Negative:** Session Isolation Vulnerability. Because the system holds so much context, failing to rigorously clear the memory buffers between queries led to severe "Agent Cross-Talk"—like the Analyst confusing Tesla's battery production with interest rates from a previous query. Strict state resets had to be enforced.
 * **Negative:** Latency and Cost. Running 5 sequential prompts takes 5 times as long (typically 15-30 seconds) and consumes more tokens than a single prompt.
 
 ---

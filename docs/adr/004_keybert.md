@@ -21,7 +21,7 @@ By combining KeyBERT with a lightweight `all-MiniLM-L6-v2` embedding model, I ca
 ## 📈 Consequences
 * **Positive:** Cost is zero. KeyBERT runs locally alongside the Spark job.
 * **Positive:** It extracts themes, not just proper nouns (e.g., it will extract "inflation fears" instead of just "Federal Reserve").
-* **Negative:** KeyBERT is inherently slower than regex or simple word counts. To mitigate this bottleneck, I wrapped the KeyBERT extraction in a PySpark `pandas_udf`. This allows KeyBERT to process the articles in large Pandas Series batches on the GPU (or optimized CPU threads), dramatically speeding up the extraction time compared to row-by-row UDFs.
+* **Negative:** KeyBERT is inherently slower than regex or simple word counts. To mitigate this bottleneck, I wrapped the KeyBERT extraction in a PySpark `pandas_udf`. This allows KeyBERT to process the articles in large Pandas Series batches on the GPU (or optimized CPU threads), dramatically speeding up the semantic extraction time. (Though, ironically, saving 3 seconds here didn't matter much when the downstream LLM agents took 25 seconds to read it anyway).
 
 ---
 ⬅️ **Previous:** [ADR 003: Qdrant](003_qdrant.md) | **Next:** [ADR 005: Sentence Transformers](005_sentence_transformers.md) ➡️

@@ -6,7 +6,7 @@
 ## 📜 Context and Problem Statement
 In the early days of the project, interaction with the AI was done via the terminal or a very basic Streamlit prototype. While Streamlit is fantastic for rapid prototyping in Python, it fundamentally struggles with complex, asynchronous state management and real-time streaming UI updates.
 
-As the Multi-Agent system grew to take 20+ seconds to respond, a simple Streamlit spinner was no longer an acceptable user experience. The users (and I) needed to see *what* the agents were doing in real-time, requiring a highly customized, reactive frontend.
+As the Multi-Agent system grew to take 20+ seconds to respond, a simple Streamlit spinner was no longer an acceptable user experience. Furthermore, because my intermediate agents were forced to output strict JSON schemas, the frontend was occasionally dumping 50 lines of unreadable "matrix code" directly into the user's chat window before arriving at the final synthesized answer. The users (and I) needed a UI capable of isolating this raw JSON while still showing *what* the agents were doing in real-time.
 
 ## 🤔 Considered Options
 1. **Streamlit / Gradio:** Easy to write in Python, but severely limited in UI customization and complex async state management.

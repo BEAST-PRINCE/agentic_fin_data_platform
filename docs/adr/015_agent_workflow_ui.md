@@ -20,10 +20,10 @@ I built the **Agent Workflow Accordion** in the React dashboard.
 
 Instead of hiding the complexity of the Multi-Agent system, I turned it into a feature. When the user submits a query, the FastAPI backend immediately begins streaming status updates. 
 
-As soon as the Planner finishes its JSON plan, that plan is pushed to the UI and rendered in a collapsible accordion. As the Researcher fetches articles, the article count pops up. As the Analyst finds risks, they populate the screen.
+As soon as the Planner finishes its JSON plan, that raw JSON is intercepted, isolated from the final human-readable chat window, and pushed into a collapsible accordion element. As the Researcher fetches articles, the article count pops up. As the Analyst finds risks, they populate the screen securely inside the accordion.
 
 ## 📈 Consequences
-* **Positive:** Massive UX improvement. 30 seconds feels like 5 seconds when the user is actively reading the intermediate steps and watching the AI "think."
+* **Positive:** Massive UX improvement. 30 seconds feels like 5 seconds when the user is actively reading the intermediate steps and watching the AI "think," without having their chat screen ruined by raw JSON dumps.
 * **Positive:** Extreme observability. If the final answer is wrong, the user can open the Workflow Accordion, look at the Researcher's JSON evidence package, and immediately see if the database failed to return relevant articles.
 * **Negative:** It required building a complex state management system in the React frontend to parse and render the intermediate JSON structures without breaking the UI.
 

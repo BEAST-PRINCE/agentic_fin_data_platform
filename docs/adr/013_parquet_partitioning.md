@@ -6,7 +6,9 @@
 ## 📜 Context and Problem Statement
 When Apache Spark processes data in the Gold layer, it writes the output as Parquet files to MinIO. 
 
-If I dump 100,000 articles into a single folder, DuckDB has to scan the metadata of every single file whenever a user queries the dashboard for "What were the trends on Tuesday?" This full-table scan would eventually degrade performance as the Datalake grew.
+If I dump 100,000 articles into a single folder, DuckDB has to scan the metadata of every single file whenever a user queries the dashboard for "What were the trends on Tuesday?" 
+
+I learned this the hard way when I proudly presented the completed Gold layer to my own AI coding assistant, only for it to sternly hand me a list of "Serious Upgrades." It pointed out that my unpartitioned, flat Parquet files were not "industry-grade" and that full-table scans would eventually degrade performance as the Datalake grew.
 
 I needed to implement Hive-style partitioning (e.g., `publish_date=2026-07-27/`), but I had to be careful not to trigger the "Small File Problem"—where Spark writes thousands of 2KB files, which causes a massive IO bottleneck when DuckDB tries to read them.
 
