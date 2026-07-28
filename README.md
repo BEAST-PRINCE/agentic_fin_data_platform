@@ -71,9 +71,31 @@ I've put together a comprehensive, step-by-step guide to configure your `.env` v
 👉 **[Read the Installation Guide](docs/00_Installation_Guide.md)**
 
 ### 4. Spin it up!
-Once you're set up, you need to run both the FastAPI server and the React dashboard simultaneously:
 
-**Terminal 1 (Backend):**
+You can launch the entire platform (Infrastructure, Backend, Frontend, Health Checks) with a single command:
+
+#### Option A: One-Command Startup (Recommended)
+
+* **On Windows (PowerShell):**
+  ```powershell
+  .\scripts\start.ps1
+  # To start without opening the browser automatically:
+  .\scripts\start.ps1 -NoBrowser
+  ```
+* **On Linux / macOS (Bash):**
+  ```bash
+  ./scripts/start.sh
+  # To start without opening the browser automatically:
+  ./scripts/start.sh --no-browser
+  ```
+
+> 💡 **Tip:** The startup script automatically validates your environment, starts Docker infrastructure, verifies service health, launches FastAPI on port 8000, starts the React Dashboard on port 5173, and opens your browser (unless `-NoBrowser` / `--no-browser` is passed). All logs are conveniently written to the `logs/` directory (`backend.log`, `frontend.log`, `startup.log`, `healthcheck.log`). To stop everything cleanly, run `.\scripts\stop.ps1` (or `./scripts/stop.sh`).
+
+#### Option B: Manual / Dual-Terminal Startup (Legacy Method)
+
+If you prefer to run and inspect the backend and frontend in separate terminal windows manually:
+
+**Terminal 1 (Backend & Infrastructure):**
 ```bash
 docker-compose up -d
 cd src/serving/api
