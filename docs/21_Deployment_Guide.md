@@ -30,17 +30,37 @@ The `infra/docker-compose.yml` file is the heart of the deployment. When you run
 
 ## 🚀 Running the Application Layers
 
-While the databases run in Docker, the application code is typically run directly on your host machine during development for easier debugging.
+You can orchestrate the full platform using our automation scripts or run individual application layers manually.
 
-### 1. Start the FastAPI Backend
-This serves the API endpoints and orchestrates the AI Agents.
+### Option A: Automated One-Command Startup (Recommended)
+
+Run the startup script from the root of the repository:
+
+* **Windows:** `.\scripts\start.ps1` (or `.\scripts\start.ps1 -NoBrowser` to skip opening browser)
+* **Linux / macOS:** `./scripts/start.sh` (or `./scripts/start.sh --no-browser` to skip opening browser)
+
+This script handles starting Docker Compose, verifying health checks, starting FastAPI and React in the background, logging to `logs/`, and opening `http://localhost:5173`.
+
+---
+
+### Option B: Manual Layer Startup (Legacy / Debugging Mode)
+
+If you are actively developing and debugging application code, you can start each layer manually:
+
+#### 1. Start Docker Infrastructure
+```bash
+docker-compose up -d
+```
+
+#### 2. Start the FastAPI Backend
+Serves API endpoints and orchestrates AI Agents.
 ```bash
 cd src/serving/api
 uvicorn main:app --reload --port 8000
 ```
 * Swagger Docs: `http://localhost:8000/docs`
 
-### 2. Start the React Dashboard
+#### 3. Start the React Dashboard
 The frontend user interface is your absolute command center.
 ```bash
 cd dashboard

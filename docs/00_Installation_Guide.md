@@ -65,22 +65,71 @@ This will download and start:
 
 ## 🚀 Step-4: Start the API and Dashboard
 
-Once the infrastructure is humming along, you need to start the FastAPI backend.
+You can start the entire platform using our automated startup scripts, or launch the services manually.
 
-```bash
-cd src/serving/api
-uvicorn main:app --reload --port 8000
+### Option 1: One-Command Automated Startup (Recommended)
+
+After setting up your virtual environment and `.env` file, run the startup script for your operating system:
+
+* **On Windows (PowerShell):**
+  ```powershell
+  .\scripts\start.ps1
+  # Pass -NoBrowser to suppress opening the browser window:
+  .\scripts\start.ps1 -NoBrowser
+  ```
+* **On Linux / macOS (Bash):**
+  ```bash
+  ./scripts/start.sh
+  # Pass --no-browser to suppress opening the browser window:
+  ./scripts/start.sh --no-browser
+  ```
+
+**What the automated script does for you:**
+1. Validates environment dependencies (Docker, Python, Node, etc.).
+2. Starts Docker Compose infrastructure (`docker-compose up -d`).
+3. Polls health endpoints to ensure Kafka, MinIO, Qdrant, Prometheus, and Grafana are ready.
+4. Launches the FastAPI backend on `http://localhost:8000`.
+5. Launches the React Dashboard on `http://localhost:5173`.
+6. Creates fresh log files in the `logs/` directory (`backend.log`, `frontend.log`, `startup.log`, `healthcheck.log`) and opens your browser (unless `-NoBrowser` / `--no-browser` is specified).
+
+To stop the platform and all background processes at any time:
+```powershell
+# On Windows:
+.\scripts\stop.ps1
+
+# On Linux / macOS:
+./scripts/stop.sh
 ```
 
-Open a new terminal, and start the React dashboard:
-
-```bash
-cd dashboard
-npm install
-npm run dev
+To restart the entire stack:
+```powershell
+.\scripts\restart.ps1
 ```
 
-The dashboard should now be available at `http://localhost:5173`.
+---
+
+### Option 2: Manual / Dual-Terminal Startup (Legacy Method)
+
+If you prefer to run services in separate terminal windows for active debugging:
+
+1. **Start Infrastructure:**
+   ```bash
+   docker-compose up -d
+   ```
+2. **Start FastAPI Backend:**
+   ```bash
+   cd src/serving/api
+   uvicorn main:app --reload --port 8000
+   ```
+3. **Start React Dashboard:**
+   In a second terminal:
+   ```bash
+   cd dashboard
+   npm install
+   npm run dev
+   ```
+
+The dashboard will be available at `http://localhost:5173`.
 
 ## 🚨 Common Installation Errors
 

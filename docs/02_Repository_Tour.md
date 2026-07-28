@@ -14,6 +14,9 @@ You are here. This contains the comprehensive documentation for the project. I t
 ### `infra/`
 This is the infrastructure-as-code folder. The most important file here is `docker-compose.yml`. This folder is responsible for spinning up the local services (MinIO, Kafka, Qdrant, Prometheus). It doesn't contain application logic; it contains the environment.
 
+### `scripts/`
+Contains the automated orchestration scripts (`start.ps1`, `stop.ps1`, `restart.ps1`, `start.sh`, `stop.sh`, `restart.sh`, and `healthcheck.py`) for one-command startup, shutdown, health monitoring, and logging.
+
 ### `dashboard/`
 This is the frontend. It is a React application that provides the chat interface and data visualizations. If you want to change the color of a button or tweak how the agent's reasoning is displayed, this is where you go.
 
