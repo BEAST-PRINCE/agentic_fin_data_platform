@@ -52,12 +52,25 @@ git clone https://github.com/yourusername/agentic_datalake.git
 cd agentic_datalake
 ```
 
-### 2. Follow the Installation Guide
-I've put together a comprehensive, step-by-step guide to get everything running locally. 
+### 2. Set up Python Environment
+Create a virtual environment and install the required dependencies so you don't pollute your global Python installation:
+```bash
+python -m venv venv
+
+# On Windows:
+venv\Scripts\activate
+# On Mac/Linux:
+source venv/bin/activate
+
+pip install -r requirements.txt
+```
+
+### 3. Follow the Installation Guide
+I've put together a comprehensive, step-by-step guide to configure your `.env` variables and start the data infrastructure. 
 
 👉 **[Read the Installation Guide](docs/00_Installation_Guide.md)**
 
-### 3. Spin it up!
+### 4. Spin it up!
 Once you're set up, you need to run both the FastAPI server and the React dashboard simultaneously:
 
 **Terminal 1 (Backend):**
