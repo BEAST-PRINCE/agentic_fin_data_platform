@@ -43,6 +43,8 @@ temp/
 
 # Runner Scripts
 *.ps1
+!scripts/*.ps1
+!scripts/**/*.ps1
 *.bat
 
 # Execution Plan
