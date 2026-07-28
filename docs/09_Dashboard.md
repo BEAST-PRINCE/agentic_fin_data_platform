@@ -41,4 +41,4 @@ I leaned into a modern, slightly "hacker" aesthetic.
 * **Color Coding:** The workflow viewer uses specific colors for different agents (e.g., Blue for Planner, Green for Researcher) so you can visually track who is doing what at a glance.
 
 ---
-⬅️ **Previous:** [08 - Multi-Agent System](08_Multi_Agent_System.md) | **Next:** [10 - Observability](10_Observability.md) ➡️
+⬅️ **Previous:** [08b - Solo Agent Prototype](08b_Solo_Agent_Prototype.md) | **Next:** [10 - Observability](10_Observability.md) ➡️

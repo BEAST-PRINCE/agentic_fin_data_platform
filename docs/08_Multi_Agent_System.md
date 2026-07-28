@@ -74,4 +74,4 @@ sequenceDiagram
 The secret to making this pipeline stable is that agents 1 through 4 NEVER output markdown or raw text. They are prompted to output *only* valid JSON. The Orchestrator parses this JSON at each step and feeds it into the next agent. This prevents "LLM drift" where one agent starts hallucinating formatting that breaks the next agent.
 
 ---
-⬅️ **Previous:** [07 - MCP and Tools](07_MCP_and_Tools.md) | **Next:** [09 - Dashboard](09_Dashboard.md) ➡️
+⬅️ **Previous:** [07 - MCP and Tools](07_MCP_and_Tools.md) | **Next:** [08b - Solo Agent Prototype](08b_Solo_Agent_Prototype.md) ➡️
