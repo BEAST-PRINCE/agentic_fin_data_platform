@@ -20,20 +20,35 @@ If you want to understand how to bridge the gap between heavy-duty Data Engineer
 
 ## ✨ Feature Highlights
 
-* **Lakehouse Architecture:** A robust Bronze ➔ Silver ➔ Gold pipeline built on top of MinIO and queried blazingly fast by DuckDB.
-* **Semantic Search:** I don't just use `LIKE '%keyword%'`. I use KeyBERT and MiniLM to extract semantic meaning, embedding everything into Qdrant for lightning-fast similarity search.
-* **Multi-Agent AI:** A team of specialized agents (Planner, Researcher, Summarizer, Analyst) that work together to answer complex financial queries.
-* **MCP Tooling:** The agents don't hallucinate; they use standard MCP tools to query the Lakehouse directly.
-* **Full Observability:** Prometheus and Grafana keep a watchful eye on my agents and data pipelines, making sure nobody is slacking off.
-* **100% Local:** No cloud credits required. I run everything locally because I like my data close and my AWS bills non-existent.
+* **Lakehouse Architecture:** Bronze ➔ Silver ➔ Gold on MinIO, queried by DuckDB.
+* **Semantic Search:** KeyBERT keywords plus MiniLM embeddings in Qdrant — not `LIKE '%keyword%'`.
+* **Two independent agents:** a **Solo Agent** for tool-first Q&A, and a **Multi-Agent** pipeline (Planner, Researcher, Summarizer, Analyst, Synthesizer) for longer research reports. The dashboard opens each in its own tab; the multi-agent stack loads only when that window is used.
+* **MCP Tooling:** Agents query the lakehouse through MCP tools, not by inventing SQL.
+* **Ops dashboard:** Start/stop Scrapy spiders and Spark stages (silver, gold, indexer) from the React UI.
+* **Observability:** Prometheus + Grafana for pipeline and agent metrics.
+* **Local-first:** Docker Compose for infra. LLMs can be local (Ollama) or cloud (Gemini / OpenAI / Anthropic via `.env`).
 
 ## 🏗️ Architecture at a Glance
 
-*(For a deep dive, see our [System Architecture](docs/03_System_Architecture.md) document)*
+*(For a deep dive, see [System Architecture](docs/03_System_Architecture.md))*
 
-![System Architecture Placeholder](docs/assets/diagrams/architecture.png)
+```mermaid
+flowchart LR
+    Scrapers[Scrapy spiders] --> Kafka
+    Kafka --> BronzeConsumer[Bronze consumer]
+    BronzeConsumer --> MinIO[(MinIO Bronze / Silver / Gold)]
+    Spark[PySpark jobs] --> MinIO
+    MinIO --> DuckDB
+    MinIO --> Qdrant
+    DuckDB --> MCP[MCP tools]
+    Qdrant --> MCP
+    MCP --> Agents[Solo agent or Multi-agent pipeline]
+    Dashboard[React dashboard] --> FastAPI
+    FastAPI --> DuckDB
+    FastAPI --> Agents
+```
 
-*Our scrapers whisper into Kafka, the Lakehouse refines the gossip, and DuckDB serves it up on a silver platter to our AI Agents.*
+Scrapers publish to Kafka. A Python consumer lands files in Bronze. Spark cleans and enriches Silver/Gold. DuckDB and Qdrant serve queries. Agents talk to the lakehouse only through MCP. The dashboard talks to FastAPI over REST.
 
 ## 🛠️ Technology Stack
 
@@ -48,7 +63,7 @@ If you want to understand how to bridge the gap between heavy-duty Data Engineer
 
 ### 1. Clone the Repository
 ```bash
-git clone https://github.com/yourusername/agentic_datalake.git
+git clone <your-fork-or-clone-url>
 cd agentic_datalake
 ```
 
@@ -95,11 +110,10 @@ You can launch the entire platform (Infrastructure, Backend, Frontend, Health Ch
 
 If you prefer to run and inspect the backend and frontend in separate terminal windows manually:
 
-**Terminal 1 (Backend & Infrastructure):**
+**Terminal 1 (Backend & Infrastructure)** — from the **repository root**:
 ```bash
-docker-compose up -d
-cd src/serving/api
-uvicorn main:app --reload --port 8000
+docker compose up -d
+uvicorn src.serving.api.main:app --reload --port 8000
 ```
 
 **Terminal 2 (Frontend):**
@@ -108,7 +122,9 @@ cd dashboard
 npm run dev
 ```
 
-Then visit `http://localhost:5173` in your browser to meet your new AI data team and experience the dashboard!
+Then open `http://localhost:5173`. The home page is the ops + search dashboard. Use **Ask Intelligence Agent** (`/chat`) or **Multi-Agent System** (`/multi-agent`) — each opens a new tab. Agents initialize on first request to that window (or on first `/api/chat` / `/api/chat/multi` call), not on dashboard load.
+
+Copy `.env.example` to `.env` before starting. MinIO console defaults in Compose are `admin` / `password123` (override via `.env`). Grafana is `http://localhost:3000` (`admin` / `admin`).
 
 ---
 
@@ -118,10 +134,14 @@ The real treasure of this repository isn't just the code—it's the documentatio
 
 If you want to understand *how* this was built and *why* I made the decisions I did, start here:
 
-* 📖 **[Documentation Index](docs/README.md)** - The table of contents for everything.
-* 🏛️ **[Project Overview](docs/01_Project_Overview.md)** - A deeper dive into the philosophy.
-* 🗺️ **[Repository Tour](docs/02_Repository_Tour.md)** - A guided tour of the codebase.
-* 📓 **[Developer Journey](docs/developer_journey/01_The_Idea.md)** - Our raw, unfiltered engineering journal. Read about our struggles, our wins, and why I made certain choices.
+* 📖 **[Documentation Index](docs/README.md)** — table of contents
+* 🛠️ **[Installation Guide](docs/00_Installation_Guide.md)** — `.env`, Docker, API, dashboard
+* 🗺️ **[Repository Tour](docs/02_Repository_Tour.md)** — where code actually lives
+* 🤖 **[Multi-Agent System](docs/08_Multi_Agent_System.md)** and **[Solo Agent](docs/08b_Solo_Agent_Prototype.md)**
+* 🖥️ **[Dashboard](docs/09_Dashboard.md)** and **[API Reference](docs/11_API_Reference.md)**
+* 📓 **[Developer Journey](docs/developer_journey/01_The_Idea.md)** — how the project evolved
+
+Folder-level notes also live next to the code (`src/README.md`, `dashboard/README.md`, `infra/README.md`, `tests/README.md`).
 
 ## 🤝 Contributing
 
