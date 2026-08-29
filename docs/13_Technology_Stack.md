@@ -6,7 +6,7 @@ Here is the honest breakdown of every major piece of technology in the Agentic D
 
 ## 🧠 The AI Layer
 * **Model Context Protocol (MCP):** The open standard for connecting AI models to data sources. I used this instead of custom LangChain tool wrappers because it is universally supported and keeps my API logic completely separated from my LLM logic.
-* **Sentence Transformers (MiniLM) & KeyBERT:** Used for generating vector embeddings and extracting semantic keywords. I chose these because they are small, incredibly fast, and run perfectly on local CPU/GPU without needing an external API key.
+* **Sentence Transformers (MiniLM) & KeyBERT:** KeyBERT extracts semantic keywords during Gold processing; the vector indexer uses the configured embedding engine (Sentence Transformers by default) to create Qdrant vectors. CPU fallback is supported when CUDA is unavailable.
 
 ## 🗄️ The Data Engineering Layer
 * **Apache Spark (PySpark):** The industry standard for big data processing. I use it to power the Medallion Architecture (Bronze -> Silver -> Gold). I chose it over Pandas because it natively handles distributed Parquet files and partitioning, which is critical for scaling.
@@ -22,7 +22,7 @@ Here is the honest breakdown of every major piece of technology in the Agentic D
 * **React & Vite:** The frontend dashboard. I used Vite for sub-second hot module reloading during development. 
 
 ## 👁️ The Observability Layer
-* **Prometheus & Grafana:** The classic observability stack. I use it to track agent latency, DuckDB query times, and Kafka lag. I chose it because it is open-source, runs locally, and integrates easily with FastAPI via the `prometheus-fastapi-instrumentator` package.
+* **Prometheus & Grafana:** The classic observability stack. The current metrics cover HTTP/agent latency, vector-search latency, and maintained lakehouse/vector counts; Kafka lag and direct DuckDB query-time metrics are not currently exported.
 
 ---
 ⬅️ **Previous:** [12 - Data Model](12_Data_Model.md) | **Next:** [14 - Project Decisions](14_Project_Decisions.md) ➡️

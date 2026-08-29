@@ -6,7 +6,7 @@ I built the Dashboard using React to be the single pane of glass for the entire 
 
 ## ⚛️ React Architecture
 
-I chose React (specifically using Vite for incredibly fast local development) because it handles the complex state management required by streaming agent responses perfectly.
+I chose React with Vite for fast local development and for managing the dashboard's operational views. The current application uses REST requests and polling rather than streaming agent responses.
 
 The application is structured into a few core components:
 * **The Main Layout:** Handles navigation and persistent sidebar elements.
@@ -20,10 +20,10 @@ One of the biggest problems with AI applications is that they act like black box
 
 I solved this by building the **Agent Workflow Accordion**.
 
-When you ask a question, the dashboard doesn't just show a loading spinner. It opens an accordion UI that updates in real-time as the agents work:
-1. `[+] Planner is thinking...` ➔ *Expands to show the task list.*
-2. `[+] Researcher is querying DuckDB...` ➔ *Expands to show the raw SQL or search terms used.*
-3. `[+] Analyst is crunching numbers...` ➔ *Expands to show the intermediate insights.*
+When you ask a question, the dashboard shows a loading state and then renders the completed workflow steps returned by `/api/chat/multi`:
+1. `[+] Planner` ➔ *Shows the parsed plan summary.*
+2. `[+] Researcher` ➔ *Shows counts and returned evidence details when available.*
+3. `[+] Summarizer` and `[+] Analyst` ➔ *Show their parsed intermediate packages.*
 
 This creates absolute transparency. If the final answer looks weird, you can open the accordion, see exactly which tool the Researcher used, and realize it pulled data for the wrong date range. It turns debugging from a nightmare into a UI feature.
 
@@ -31,7 +31,7 @@ This creates absolute transparency. If the final answer looks weird, you can ope
 
 The dashboard communicates heavily with the FastAPI backend (`src/serving/`).
 * **State:** I use standard React hooks (`useState`, `useEffect`) to manage the chat history and the loading states of the agent workflow.
-* **Streaming:** To make the app feel responsive, the backend streams tokens back to the frontend as the Synthesizer generates the final report, rather than waiting for the entire block of text to finish.
+* **Polling:** Status and log panels poll REST endpoints on intervals. Chat requests wait for the complete JSON response; there is currently no SSE, WebSocket, or token-by-token response stream.
 
 ## 🎨 UI Decisions
 

@@ -43,12 +43,12 @@ flowchart TD
     S --> K
     API --> K
     
-    K -->|PySpark| B
+    K -->|Python Bronze consumer| B
     B -->|PySpark| Si
     Si -->|PySpark| G
     
     G -.->|SQL| D
-    G -->|KeyBERT Embeddings| Q
+    G -->|Vector indexer| Q
     
     D <-->|MCP| F
     Q <-->|MCP| F
@@ -71,13 +71,13 @@ flowchart TD
 Let's walk through the major architectural blocks.
 
 ### 1. Data Gathering & Streaming
-* **Scrapers:** Python scripts running on a schedule to fetch financial news, stock prices, and market sentiment.
-* **Apache Kafka:** I use Kafka as a buffer. Scrapers don't write directly to the database. They dump payloads onto a Kafka topic. This decouples the fast scraping process from the slower, heavier data processing jobs. If the database goes down, Kafka holds the messages safely until it comes back up.
+* **Scrapers:** Scrapy spiders that fetch financial news. The repository does not include a scheduler; spiders are started manually or by the dashboard.
+* **Apache Kafka:** Kafka buffers normalized scraper payloads. The Python Bronze consumer reads the topic and writes objects to MinIO. This decouples scraping from downstream Spark processing.
 
 ### 2. The Medallion Lakehouse
 I use **MinIO** (an S3-compatible object store) to hold the actual files, and **Apache Spark** to process them.
 * **Bronze:** Raw data lands here exactly as the scraper found it. If a scraper breaks formatting, we don't lose the data; it just sits in Bronze until we fix the parser.
-* **Silver:** Spark cleans the data, enforces strict schemas, drops duplicates, and writes it back to MinIO in Parquet format.
+* **Silver:** Spark reads new Bronze objects, drops records missing critical fields, filters content shorter than 60 words, deduplicates by `article_id`, and writes Parquet to MinIO.
 * **Gold:** The data is aggregated and optimized for read performance. 
 
 ### 3. The Retrieval Engines
@@ -90,7 +90,7 @@ Once data is in the Gold layer, it splits into two paths so our AI agents can qu
 * **Multi-Agent System:** A team of LLM-powered agents. The Planner decides what needs to be done, the Researcher uses the MCP tools to fetch data from DuckDB/Qdrant, and the Analyst/Summarizer package the final answer.
 
 ### 5. The Dashboard
-* **React UI:** The front door for the user. It streams the agent's thought process in real-time, displaying both the final markdown report and the interactive steps the agents took to get there.
+* **React UI:** The front door for the user. It polls REST endpoints for articles, health, scraper/pipeline status, and logs. Multi-agent responses return the final report and completed workflow steps in one response; the current UI does not use token or SSE streaming.
 
 ---
 ⬅️ **Previous:** [02 - Repository Tour](02_Repository_Tour.md) | **Next:** [04 - Data Pipeline](04_Data_Pipeline.md) ➡️

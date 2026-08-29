@@ -10,25 +10,23 @@ I needed a way to see what my system was doing without constantly tailing termin
 
 I chose the industry-standard open-source observability stack. Both are orchestrated via `docker-compose.yml` in the `infra/` folder.
 
-* **Prometheus:** The time-series database. It acts like a vacuum cleaner, constantly reaching out to all my services every 5 seconds and scraping their current metrics (e.g., CPU usage, number of API requests, Kafka queue size).
+* **Prometheus:** The time-series database. It scrapes the configured FastAPI metrics endpoint. The repository does not currently export custom CPU, RAM, or Kafka-lag metrics.
 * **Grafana:** The visualization layer. It connects to Prometheus and turns those raw numbers into beautiful, readable dashboards.
 
 ## 📊 What I Monitor
 
-I don't just monitor CPU and RAM. I built custom metrics into the FastAPI backend (`src/serving/`) and the Agent Orchestrator. 
+I don't just rely on logs. I built custom application metrics into the FastAPI backend and retrieval code.
 
-Here is what I am watching on my Grafana dashboards:
+The code currently exposes these application metrics:
 
 ### 1. Agent Latency (The Most Important Metric)
 How long does a user wait for an answer? I track this at a granular level:
-* Time spent by Planner.
-* Time spent by Researcher waiting on DuckDB.
-* Time spent by Synthesizer generating text.
-If latency spikes, I can instantly see which agent is the bottleneck.
+* Request counts and latency histograms for solo and multi-agent API requests.
+* Vector-search request count and latency.
+* Bronze, Silver, Gold, and Qdrant record gauges when retrieval code updates them.
 
 ### 2. Lakehouse Pipeline Health
-* **Kafka Lag:** How many messages have the scrapers pushed that Spark hasn't processed yet? If this number grows, the Bronze layer job has crashed.
-* **Data Volume:** Total MBs of Parquet files in the Gold layer.
+* **Lakehouse counts:** Maintained Bronze, Silver, and Gold record counters, plus Qdrant vector count when available.
 
 ### 3. API Health
 * **Error Rates:** Number of HTTP 500s or 422s.
@@ -36,7 +34,7 @@ If latency spikes, I can instantly see which agent is the bottleneck.
 
 ## 📡 Health Endpoints
 
-Every custom service I wrote (especially the FastAPI backend) has a `/metrics` endpoint specifically designed for Prometheus to scrape. I also added a `/health` endpoint that returns a simple `{"status": "ok"}` if the service can successfully ping DuckDB and Qdrant. 
+The FastAPI backend exposes `/metrics` through `prometheus-fastapi-instrumentator`. `/health` is a lightweight API liveness response; `/api/health` performs dependency checks for MinIO, Kafka, Qdrant, DuckDB, and Ollama according to configuration.
 
 ## 🔮 Future Metrics
 

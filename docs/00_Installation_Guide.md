@@ -10,7 +10,7 @@ Before you start, make sure you have the following installed:
 
 1. **Docker and Docker Compose:** This is non-negotiable. I use Docker to spin up Kafka, Zookeeper, MinIO, Qdrant, Prometheus, and Grafana.
 2. **Python 3.11+:** The backend, Spark jobs, and agents are all written in Python.
-3. **Node.js 18+ (Optional but recommended):** If you want to run the React dashboard locally for development instead of in a container.
+3. **Node.js and npm:** Required to run the React dashboard locally. Use the versions supported by the checked-in `dashboard/package-lock.json`.
 4. **Git:** To clone the repository.
 
 ## 🛠️ Step-1: Clone and Environment Setup
@@ -49,14 +49,14 @@ Open `.env` and fill it out. The defaults are generally fine for local Docker Co
 
 This is where the magic happens. I put all the heavy lifting into `docker-compose.yml`.
 
-Navigate to the `infra/` folder (or run it from the root depending on where the `docker-compose.yml` lives):
+Run the Compose file from the repository root:
 
 ```bash
-docker-compose up -d
+docker compose up -d
 ```
 
 This will download and start:
-* **MinIO** (Accessible at `http://localhost:9001`) - Default login is usually `minioadmin` / `minioadmin`.
+* **MinIO** (Accessible at `http://localhost:9001`) - The Compose defaults are `admin` / `password123`. Set `MINIO_ROOT_USER` and `MINIO_ROOT_PASSWORD` in `.env` before exposing it beyond local development.
 * **Kafka & Zookeeper** (Running on port 9092)
 * **Qdrant** (Accessible at `http://localhost:6333/dashboard`)
 * **Prometheus & Grafana** (Grafana at `http://localhost:3000`)
@@ -86,7 +86,7 @@ After setting up your virtual environment and `.env` file, run the startup scrip
 
 **What the automated script does for you:**
 1. Validates environment dependencies (Docker, Python, Node, etc.).
-2. Starts Docker Compose infrastructure (`docker-compose up -d`).
+2. Starts Docker Compose infrastructure (`docker compose up -d`).
 3. Polls health endpoints to ensure Kafka, MinIO, Qdrant, Prometheus, and Grafana are ready.
 4. Launches the FastAPI backend on `http://localhost:8000`.
 5. Launches the React Dashboard on `http://localhost:5173`.
@@ -114,12 +114,11 @@ If you prefer to run services in separate terminal windows for active debugging:
 
 1. **Start Infrastructure:**
    ```bash
-   docker-compose up -d
+   docker compose up -d
    ```
 2. **Start FastAPI Backend:**
    ```bash
-   cd src/serving/api
-   uvicorn main:app --reload --port 8000
+   uvicorn src.serving.api.main:app --reload --port 8000
    ```
 3. **Start React Dashboard:**
    In a second terminal:
@@ -134,14 +133,14 @@ The dashboard will be available at `http://localhost:5173`.
 ## 🚨 Common Installation Errors
 
 * **"Port already in use" (e.g., 9000 or 3000):** You probably have another service running on your machine taking up MinIO's or Grafana's port. Stop the conflicting service, or change the port mapping in `docker-compose.yml`.
-* **"Kafka Broker not available":** Sometimes Kafka takes a while to start up, or Docker networking is being stubborn. Try `docker-compose restart kafka`.
+* **"Kafka Broker not available":** Sometimes Kafka takes a while to start up, or Docker networking is being stubborn. Try `docker compose restart kafka`.
 * **"ModuleNotFoundError: No module named 'pyspark'":** You forgot to activate your virtual environment before running the Spark jobs!
 
 ## 🎉 First Successful Run
 
 To test if everything works:
-1. Open MinIO (`localhost:9001`) and create the `bronze`, `silver`, and `gold` buckets if they aren't created automatically.
-2. Run one of the scrapers in `src/scrapers/`.
+1. Open MinIO (`localhost:9001`) and confirm the `bronze`, `silver`, and `gold` buckets are available. Components create the buckets they require when they start.
+2. Start a spider through the dashboard or from `src/ingestion/scrapers/scrapy_project/`.
 3. Check your FastAPI logs. If it's silent and not throwing errors, you're good.
 4. Go to the dashboard and type: "What is the latest news regarding Apple?" If the agents respond, you have successfully built a multi-agent lakehouse.
 

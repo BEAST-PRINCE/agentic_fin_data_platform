@@ -22,7 +22,7 @@ Integrating Qdrant and the Sentence Transformers was the next hurdle. I decided 
 At the same time, I was fighting with the agents. Early versions of the Planner agent would hallucinate tools that didn't exist or pass strings into integer fields. Enforcing strict JSON schemas via MCP was born out of pure frustration.
 
 ### Era 4: The Dashboard & Observability Polish
-The final era was about making it usable. Staring at terminal logs wasn't cutting it. I built the React/Vite dashboard. The biggest breakthrough here was the "Agent Workflow" accordion. Originally, the dashboard just hung for 30 seconds while the agents thought, leaving the user wondering if it crashed. By streaming the intermediate, non-human-readable JSON steps into a beautiful UI, the latency suddenly felt like a feature, not a bug. 
+The final era was about making it usable. Staring at terminal logs wasn't cutting it. I built the React/Vite dashboard. The biggest breakthrough here was the "Agent Workflow" accordion. The dashboard waits for the multi-agent request to complete, then presents the intermediate JSON packages separately from the final answer so the pipeline is inspectable without cluttering the chat view.
 I also spent significant time fixing session isolation issues—if you asked two questions quickly, the agents would corrupt each other's context. Implementing proper conversational boundaries and Prometheus timing metrics finally made the system feel like a mature product.
 
 ### Why read the full logs?

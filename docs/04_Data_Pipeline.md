@@ -4,7 +4,7 @@ If you want to build an AI that can answer questions about data, the AI is only 
 
 I didn't want my agents guessing or hallucinating based on messy, unstructured web scrapes. I needed a rigorous, industrial-grade data pipeline to clean and organize the data *before* the agents ever saw it. 
 
-To do this, I implemented the **Medallion Architecture**, a data design pattern popularized by Databricks, using Apache Spark. 
+To do this, I implemented a **Medallion Architecture** using MinIO and Apache Spark for Silver/Gold processing. Kafka-to-Bronze landing is handled by a Python consumer.
 
 Here is how data travels from chaos to clarity.
 
@@ -13,12 +13,12 @@ Here is how data travels from chaos to clarity.
 **Purpose:** To land data as quickly and safely as possible without losing any historical context.
 
 **The Process:**
-When the scrapers run, they publish JSON messages to Kafka. The Bronze PySpark job acts as a Kafka consumer. It reads these messages in micro-batches and writes them directly into the MinIO object store (`bronze` bucket).
+When the scrapers run, they publish normalized JSON messages to Kafka. `src/ingestion/kafka/bronze_consumer.py` consumes them and writes one JSON object per article into the MinIO `bronze` bucket using Hive-style source/date partitions.
 
 **Rules of Bronze:**
 1. **No schema enforcement:** If a scraper accidentally sends a string instead of an integer for a timestamp, Bronze doesn't care. It accepts everything.
 2. **Append-only:** We never update or delete records in Bronze. It is a pure, immutable historical log.
-3. **Format:** Usually stored as raw JSON or basic unoptimized Parquet.
+3. **Format:** Raw JSON objects under `raw_news/source=.../year=.../month=.../day=.../`.
 
 **Why it exists:** If a bug in my downstream cleaning logic accidentally deletes half my data, I can always return to the Bronze layer and replay the history to rebuild the database perfectly.
 
@@ -30,9 +30,9 @@ When the scrapers run, they publish JSON messages to Kafka. The Bronze PySpark j
 The Silver PySpark job reads the messy data from the Bronze bucket and goes to work. 
 
 **Rules of Silver:**
-1. **Schema Enforcement:** Here, we demand structure. Dates must be actual Timestamp objects. Prices must be Floats. If a record doesn't match the schema, it is quarantined or dropped.
-2. **Deduplication:** Scrapers often pull the same news article twice. Silver identifies duplicates based on URL or article ID and keeps only the latest version.
-3. **Data Cleaning:** Standardizing company tickers (e.g., changing "Apple Inc." to "AAPL"), stripping out HTML tags from article text, and handling null values.
+1. **Required-field filtering:** Records missing `title`, `content`, or `source` are dropped.
+2. **Content filtering:** Articles with fewer than 60 space-separated words are dropped.
+3. **Deduplication:** Duplicate records are removed using `article_id`.
 4. **Format:** Stored as highly compressed, columnar Parquet files.
 
 **Why it exists:** Data scientists and analysts (or in our case, AI Analyst Agents) shouldn't have to write `IF NULL THEN...` logic in every single query. Silver ensures the data is trustworthy.
@@ -45,10 +45,12 @@ The Silver PySpark job reads the messy data from the Bronze bucket and goes to w
 The Gold PySpark job reads from Silver and performs business-level aggregations. 
 
 **Rules of Gold:**
-1. **Aggregations:** Instead of just having a table of individual stock trades, Gold might create a table of "Daily Volatility by Ticker." 
-2. **Join Denormalization:** If an agent needs to know a company's sector and its recent news, we don't want DuckDB doing massive joins on the fly. Gold joins the `companies` table with the `news` table to create wide, ready-to-read datasets.
-3. **Partitioning:** The Parquet files are heavily partitioned (usually by `date` and `ticker`). This is critical. When DuckDB asks for Apple news from yesterday, partitioning allows it to skip reading 99% of the files in the Lakehouse, returning the answer in milliseconds.
-4. **Vector Prep:** This is also where the text data is prepared for the semantic pipeline (extracting keywords with KeyBERT) before being sent to Qdrant.
+1. **Serving table:** `articles_serving` contains article-level fields used by the API and vector indexer.
+2. **Aggregations:** `daily_trends` groups article counts by date, source domain, and category; `entity_mentions` counts source tags and semantic keywords.
+3. **Partitioning:** The two aggregate tables are partitioned by `publish_date`. `articles_serving` is not date-partitioned.
+4. **Vector prep:** Gold extracts KeyBERT keywords. `vector_indexer.py` separately embeds Gold articles and upserts them into Qdrant.
+
+> **Important operational note:** The current Gold job filters to new records but overwrites the aggregate output paths. Treat this as a known correctness limitation until aggregate partitions are merged or recomputed safely.
 
 **Why it exists:** AI agents have a limited context window and a limited attention span. Gold ensures they get exactly the data they need, formatted perfectly, instantly.
 

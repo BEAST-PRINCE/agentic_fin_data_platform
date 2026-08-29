@@ -7,9 +7,9 @@ If you prefer to fix things yourself, here is a catalog of the most common issue
 ## 🐋 Infrastructure Issues (Docker)
 
 ### "Kafka Broker not available"
-* **Symptom:** Scrapers throw connection errors, or the Spark Bronze job crashes immediately on startup.
+* **Symptom:** Scrapers throw connection errors, or the Python Bronze consumer cannot connect to Kafka immediately on startup.
 * **Cause:** Kafka is notoriously slow to start up. Zookeeper has to boot, then Kafka has to register.
-* **Fix:** Wait 60 seconds after running `docker-compose up -d`. If it still fails, run `docker-compose restart kafka`.
+* **Fix:** Wait 60 seconds after running `docker compose up -d`. If it still fails, run `docker compose restart kafka`.
 
 ### "MinIO connection refused" or "S3A Error"
 * **Symptom:** Spark jobs fail with `java.net.ConnectException: Connection refused` or DuckDB throws an IO Error.

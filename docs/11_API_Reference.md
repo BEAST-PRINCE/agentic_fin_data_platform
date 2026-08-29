@@ -15,12 +15,12 @@ Interacts with the single-agent intelligence.
 Interacts with the multi-agent pipeline (Planner, Researcher, Analyst, etc).
 **Request Body:** `{"message": "string"}`
 **Response (JSON):**
-Returns the final answer and the workflow steps taken.
+Returns the final answer and the completed workflow steps. The request is processed synchronously; this endpoint does not stream tokens.
 ```json
 {
   "reply": "# Market Analysis...",
   "workflow_steps": [
-    {"agent": "Planner", "action": "Created plan", "details": "..."}
+    {"agent": "Planner Agent", "status": "completed", "summary": "...", "details": {}, "execution_time_ms": 123}
   ],
   "agent": "multi"
 }
@@ -56,7 +56,7 @@ Get all available dates with trending data.
 Retrieve datalake statistics for the dashboard (runs synchronous DuckDB in a background threadpool).
 
 ### `GET /api/domain-throughput`
-Retrieve real-time domain throughput stats.
+Retrieve the latest persisted domain-throughput counters maintained by the Bronze consumer. The response is cached briefly; it is not a live Kafka-lag measurement.
 
 ### `GET /api/health`
 Perform health checks on all dependent infrastructure components.
@@ -71,14 +71,16 @@ Run a specific pipeline stage (e.g., `silver`, `gold`, `indexer`).
 Stop the currently running pipeline stage.
 
 ### `GET /api/pipeline/logs`
-Get the live logs of the running pipeline stage (Query param `stage`).
+Get the latest in-memory log buffer for a pipeline stage (Query param `stage`). The backend also periodically persists pipeline logs to MinIO.
 
 ## 🕷️ Scraper Endpoints
 
 * `GET /api/scrapers` - List all available scrapers and status.
 * `POST /api/scrapers/{name}/start` - Start a scrapy spider.
 * `POST /api/scrapers/{name}/stop` - Stop a running scrapy spider.
-* `GET /api/scrapers/{name}/logs` - Get real-time tail of scraper logs.
+* `GET /api/scrapers/{name}/logs` - Get the latest in-memory scraper log buffer.
+
+> **Security:** These endpoints currently have no authentication or authorization. Keep the API on a trusted local network until access control is added.
 
 ---
 ⬅️ **Previous:** [10 - Observability](10_Observability.md) | **Next:** [12 - Data Model](12_Data_Model.md) ➡️

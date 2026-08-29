@@ -24,15 +24,15 @@ This project solves this by creating a **single interface** where you can ask hi
 
 ## 🌊 The High-Level Workflow
 
-At 10,000 feet, the project operates in two continuous phases: **The Background Sweep** and **The Active Query**.
+At 10,000 feet, the project has two operational phases: **The Data Pipeline** and **The Active Query**. The pipeline is started manually or from the dashboard; it is not a built-in scheduler.
 
 ### Phase 1: The Background Sweep (Data Engineering)
-While you sleep, the system is working:
-1. **Scrapers** constantly monitor financial sites.
+When the ingestion and processing jobs are running:
+1. **Scrapers** fetch financial news from configured sites.
 2. They push raw text into **Kafka** topics.
-3. **Spark** wakes up, reads Kafka, and dumps the raw data into the **Bronze** layer of our MinIO Lakehouse.
+3. The Python Bronze consumer reads Kafka and dumps raw JSON objects into the **Bronze** layer of MinIO.
 4. Another Spark job cleans it, deduplicates it, and moves it to **Silver**.
-5. Finally, the **Gold** job structures it perfectly for DuckDB and uses KeyBERT/MiniLM to extract semantic embeddings, pushing those into **Qdrant**.
+5. Finally, the **Gold** job creates serving and aggregate Parquet tables and extracts KeyBERT keywords. The separate vector indexer generates embeddings and pushes them into **Qdrant**.
 
 ### Phase 2: The Active Query (Multi-Agent AI)
 When you wake up and type a question into the dashboard:

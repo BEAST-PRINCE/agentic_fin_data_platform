@@ -5,7 +5,7 @@ This project is powerful, but it is not magic. I built this under specific const
 It is important to be honest about what this system *cannot* do.
 
 ## 1. Scraper Brittleness
-The pipeline starts with web scrapers (`src/scrapers/`). 
+The pipeline starts with Scrapy spiders under `src/ingestion/scrapers/scrapy_project/`.
 * **Limitation:** If a target financial news website changes its HTML structure, CSS classes, or implements aggressive anti-bot protection (like Cloudflare Turnstile), the scraper will silently fail and return empty data to Kafka.
 * **Reality:** Maintaining web scrapers is a full-time job. In a true enterprise environment, this ingestion layer would be replaced by a paid, structured API feed (like Bloomberg or Reuters).
 
@@ -15,7 +15,7 @@ The Multi-Agent system works by passing JSON packages of evidence from the Resea
 * **Reality:** Furthermore, the current semantic search approach struggles with extremely long, dense documents (like 150-page 10-K SEC filings). KeyBERT extracts keywords fine, but the agents cannot read a full 10-K in one pass without sophisticated RAG chunking techniques that are currently outside the scope of this project.
 
 ## 3. Not Horizontally Scalable (Yet)
-* **Limitation:** The Spark jobs (`silver_layer.py`, `gold_layer.py`) are currently configured to run with `.master("local[*]")`. They utilize all cores on the local machine, but they do not distribute across a cluster of separate worker nodes.
+* **Limitation:** The Spark jobs (`silver_layer.py`, `gold_layer.py`) are currently configured with `.master("local[1]")`. They run on one local Spark worker and do not distribute across a cluster of separate worker nodes.
 * **Reality:** If the data volume grows from gigabytes to terabytes, the local Spark setup will eventually hit a wall. Migrating to an AWS EMR or Databricks cluster would be required.
 
 ## 4. Analytical Latency

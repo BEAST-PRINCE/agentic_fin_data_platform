@@ -8,7 +8,7 @@ Here is exactly what happens when you deploy, and how you interact with the syst
 
 ## 🐳 The Docker Compose Stack
 
-The `infra/docker-compose.yml` file is the heart of the deployment. When you run `docker-compose up -d`, it provisions the following isolated network of containers:
+The root `docker-compose.yml` file is the heart of the deployment. When you run `docker compose up -d`, it provisions the following services:
 
 ### Storage & Ingestion
 * **MinIO (Lakehouse):** 
@@ -24,7 +24,7 @@ The `infra/docker-compose.yml` file is the heart of the deployment. When you run
 
 ### Observability
 * **Prometheus:** 
-  * Port: `9090` (Scrapes metrics from the API and infrastructure).
+   * Port: `9090` (Stores metrics scraped from the configured API target).
 * **Grafana:** 
   * Port: `3000` (The visual dashboard for system health. Default login: `admin`/`admin`).
 
@@ -49,14 +49,13 @@ If you are actively developing and debugging application code, you can start eac
 
 #### 1. Start Docker Infrastructure
 ```bash
-docker-compose up -d
+docker compose up -d
 ```
 
 #### 2. Start the FastAPI Backend
 Serves API endpoints and orchestrates AI Agents.
 ```bash
-cd src/serving/api
-uvicorn main:app --reload --port 8000
+uvicorn src.serving.api.main:app --reload --port 8000
 ```
 * Swagger Docs: `http://localhost:8000/docs`
 
@@ -76,8 +75,8 @@ The React Dashboard has full control over the infrastructure.
 From the Dashboard, you can:
 1. Navigate to the **Data Pipeline** tab.
 2. Start or stop any specific web scraper with a click.
-3. Trigger the PySpark Medallion jobs (Bronze to Silver to Gold) directly from the UI.
-4. Watch the pipeline logs stream live directly into your browser.
+3. Trigger the Spark Silver, Gold, and vector-indexing jobs directly from the UI.
+4. Poll the latest pipeline and scraper log buffers from the UI.
 
 The entire system is designed to be operated visually from that single pane of glass.
 
@@ -85,8 +84,8 @@ The entire system is designed to be operated visually from that single pane of g
 
 If you outgrow your local machine, the migration path is straightforward because of the architecture:
 
-1. **MinIO ➔ AWS S3:** Because MinIO uses the S3 API, you simply change the `.env` endpoint from `localhost:9000` to `s3.amazonaws.com` and provide real AWS IAM credentials. DuckDB and Spark won't know the difference.
-2. **Local Qdrant ➔ Qdrant Cloud:** Update the `QDRANT_URL` to point to a managed cluster.
+1. **MinIO ➔ AWS S3:** Because MinIO uses the S3 API, storage can be adapted for AWS, but endpoint, credentials, TLS, bucket, and Spark/DuckDB settings must be reviewed together.
+2. **Local Qdrant ➔ Qdrant Cloud:** Update the Qdrant client configuration and add authentication; the current URL is hardcoded in retrieval/indexing code and should be centralized first.
 3. **Local Spark ➔ AWS EMR / Databricks:** Package the `src/processing/` scripts and submit them to a managed cluster for horizontal scaling.
 4. **FastAPI & React:** Containerize them using their respective Dockerfiles and deploy via AWS ECS or Kubernetes.
 

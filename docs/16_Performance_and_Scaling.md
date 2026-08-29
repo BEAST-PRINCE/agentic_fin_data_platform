@@ -16,7 +16,7 @@ However, DuckDB is an in-memory OLAP engine. If you create a single global DuckD
 
 During the Gold layer processing (`src/processing/gold_layer.py`), I use KeyBERT to extract semantic keywords from every article. Running NLP models row-by-row in Python is painfully slow.
 
-**The Fix:** Instead of passing strings one at a time, I built a PySpark `pandas_udf`. This passes chunks of the DataFrame to KeyBERT as Pandas Series. KeyBERT automatically detects this list and runs the inference in batches on the GPU (if available) or optimized CPU threads, resulting in a 10x-50x speedup in the Gold layer ETL job.
+**The Fix:** Instead of passing strings one at a time, I built a PySpark `pandas_udf`. This passes batches of the DataFrame to KeyBERT as Pandas Series. The embedder falls back to CPU when CUDA is unavailable; the repository does not include a benchmark proving a fixed speedup.
 
 ## 🗂️ Spark Parquet Partitioning
 
@@ -26,7 +26,7 @@ If DuckDB has to scan 10GB of Parquet files to find articles from yesterday, it 
 ```python
 gold_daily_trends.write.partitionBy("publish_date").parquet(...)
 ```
-When DuckDB executes a query like `WHERE publish_date = '2026-07-27'`, it performs *Partition Pruning*. It doesn't even download the files for other dates from MinIO. It only reads the specific folder it needs, turning a 5-second query into a 50-millisecond query.
+When DuckDB executes a query filtered by `publish_date`, the Hive-style layout can enable *Partition Pruning*. The actual improvement depends on object count, data volume, MinIO latency, and query shape; this repository does not include a benchmark supporting a fixed latency.
 
 *(Note: I intentionally chose NOT to partition `gold_articles_serving` by date, because the agents usually query it by `article_id` from the Qdrant payload, and over-partitioning would lead to the "Small File Problem".)*
 
