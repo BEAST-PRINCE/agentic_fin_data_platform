@@ -61,6 +61,8 @@ Starter_Plan.md
 
 # Graphify
 graphify_project/
+graphify-out/
+GRAPH_REPORT.md
 
 # Dashboard / Web UI
 dashboard/node_modules/
