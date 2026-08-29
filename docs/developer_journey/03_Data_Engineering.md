@@ -6,7 +6,7 @@ To fix the brittleness of the raw JSON scrapes, I adopted the Medallion Architec
 
 I introduced Apache Spark to handle the heavy lifting. The plan was beautiful:
 1. Scrapers push to Kafka.
-2. Spark reads Kafka and dumps raw JSON to the Bronze layer.
+2. The Python Bronze consumer reads Kafka and dumps raw JSON to the Bronze layer; Spark begins at the Silver stage.
 3. A Silver Spark job cleans it.
 4. A Gold Spark job structures it.
 

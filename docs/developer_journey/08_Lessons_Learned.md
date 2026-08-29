@@ -13,7 +13,7 @@ I cannot overstate how valuable it was to build this entirely on Docker Compose 
 Trying to make an LLM output a perfectly formatted markdown report while simultaneously running complex logic is a recipe for failure. Separating the "Thinking" (JSON) from the "Formatting" (Markdown) into different agents was the single biggest breakthrough for pipeline stability. 
 
 ## 3. Databases are Fast. AI is Slow.
-I spent days optimizing Spark partitions and DuckDB thread pools to shave 200 milliseconds off a query. Meanwhile, the LLM took 25 seconds just to generate tokens. The bottleneck in modern AI applications is rarely the database; it is almost always the model inference. Masking that latency with streaming UI updates (the Workflow Accordion) is just as important as writing efficient SQL.
+The LLM is expected to dominate end-to-end response time, while the dashboard's workflow accordion makes the completed intermediate results inspectable. The current UI does not stream intermediate updates while a request is running.
 
 ## 4. Documentation is Code
 This documentation wasn't written as an afterthought. It was written as part of the engineering process. If you can't explain your architecture clearly in a Markdown file, you probably don't understand it well enough to code it.
