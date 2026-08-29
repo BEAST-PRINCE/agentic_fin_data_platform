@@ -10,33 +10,33 @@ Here is the 10,000-foot view of how everything connects.
 
 ```mermaid
 flowchart TD
-    subgraph Data Gathering
-        S[Web Scrapers]
-        API[External APIs]
+    subgraph gathering["Data Gathering"]
+        S["Web Scrapers"]
+        API["External APIs"]
     end
 
-    subgraph Streaming
-        K[Apache Kafka]
+    subgraph streaming["Streaming"]
+        K["Apache Kafka"]
     end
 
-    subgraph The Lakehouse (MinIO & Spark)
-        B[(Bronze Layer\nRaw JSON)]
-        Si[(Silver Layer\nCleaned Parquet)]
-        G[(Gold Layer\nAggregated Parquet)]
+    subgraph lakehouse["The Lakehouse (MinIO & Spark)"]
+        B[("Bronze Layer<br/>Raw JSON")]
+        Si[("Silver Layer<br/>Cleaned Parquet")]
+        G[("Gold Layer<br/>Aggregated Parquet")]
     end
 
-    subgraph Storage & Retrieval
-        D[(DuckDB\nAnalytical Engine)]
-        Q[(Qdrant\nVector Database)]
+    subgraph retrieval["Storage & Retrieval"]
+        D[("DuckDB<br/>Analytical Engine")]
+        Q[("Qdrant<br/>Vector Database")]
     end
 
-    subgraph The AI Brain
-        F[FastAPI & MCP Tools]
-        M[Multi-Agent System\nPlanner, Researcher, etc.]
+    subgraph ai_brain["The AI Brain"]
+        F["FastAPI & MCP Tools"]
+        M["Multi-Agent System<br/>Planner, Researcher, etc."]
     end
 
-    subgraph User Experience
-        UI[React Dashboard]
+    subgraph experience["User Experience"]
+        UI["React Dashboard"]
     end
 
     %% Connections
