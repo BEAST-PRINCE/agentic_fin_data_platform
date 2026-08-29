@@ -18,9 +18,9 @@ If a web application hangs for 30 seconds with nothing but a spinning loading wh
 ## ✅ Decision
 I built the **Agent Workflow Accordion** in the React dashboard.
 
-Instead of hiding the complexity of the Multi-Agent system, I turned it into a feature. When the user submits a query, the FastAPI backend immediately begins streaming status updates. 
+Instead of hiding the complexity of the Multi-Agent system, I turned it into a feature. When the user submits a query, the FastAPI backend runs the pipeline and returns the completed workflow steps alongside the final response.
 
-As soon as the Planner finishes its JSON plan, that raw JSON is intercepted, isolated from the final human-readable chat window, and pushed into a collapsible accordion element. As the Researcher fetches articles, the article count pops up. As the Analyst finds risks, they populate the screen securely inside the accordion.
+After the response arrives, the Planner, Researcher, Summarizer, Analyst, and Synthesizer results are isolated from the final human-readable chat window and displayed in a collapsible accordion. The current implementation does not push steps to the browser while the pipeline is running.
 
 ## 📈 Consequences
 * **Positive:** Massive UX improvement. 30 seconds feels like 5 seconds when the user is actively reading the intermediate steps and watching the AI "think," without having their chat screen ruined by raw JSON dumps.

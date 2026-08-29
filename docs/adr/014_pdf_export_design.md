@@ -18,7 +18,7 @@ I chose **Markdown-Native Output**.
 
 In the `SYNTHESIZER_INSTRUCTION` (inside `instructions.py`), the agent is explicitly instructed to adapt its formatting based on the user's intent. If the user asks for a report, it must output a structured document with specific Markdown headers (`# Executive Summary`, `## Risks`, etc.).
 
-The React dashboard receives this raw Markdown string and renders it using `react-markdown` with Tailwind Typography (`prose`). If the user wants a PDF, they simply use the browser's native "Print to PDF" functionality, which utilizes a specialized CSS `@media print` stylesheet to remove the dashboard navigation and format the report perfectly for an 8.5x11 page.
+The React dashboard receives the final report as a string. PDF export is implemented in `dashboard/src/utils/pdfGenerator.ts` with `jsPDF`; it performs a deliberately lightweight Markdown-like conversion for headings, lists, emphasis, and code blocks before saving an A4 PDF. The project does not currently depend on `react-markdown` or Tailwind Typography for report rendering.
 
 ## 📈 Consequences
 * **Positive:** Zero backend overhead. The FastAPI server just returns a string.

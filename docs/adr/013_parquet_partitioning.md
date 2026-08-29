@@ -21,7 +21,7 @@ I needed to implement Hive-style partitioning (e.g., `publish_date=2026-07-27/`)
 I implemented **Strategic Partitioning** in `src/processing/gold_layer.py`.
 
 1. **`gold_daily_trends` and `gold_entity_mentions`:** These tables are explicitly partitioned by `publish_date`. 
-   * *Why?* Because the dashboard and the agents almost always query these tables using a date range. This allows DuckDB to perform *Partition Pruning* (ignoring folders outside the date range), ensuring queries take 50ms regardless of how large the total dataset grows.
+   * *Why?* Because the dashboard and the agents query these tables using date filters. This allows DuckDB to use Hive-style partition pruning; actual latency depends on data volume, object count, and MinIO/network performance.
 2. **`gold_articles_serving`:** This table is **NOT** partitioned by date; it is simply appended to the root folder.
    * *Why?* When the AI Agent finds a relevant vector in Qdrant, it often wants to fetch the full text of that specific `article_id`. If the table was partitioned by date, DuckDB wouldn't know which folder to look in without scanning all of them. Furthermore, not partitioning keeps the Parquet file sizes large, which is optimal for read performance.
 

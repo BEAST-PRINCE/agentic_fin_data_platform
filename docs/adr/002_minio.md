@@ -18,7 +18,7 @@ I needed a local storage solution that mimicked enterprise cloud storage.
 ## ✅ Decision
 I chose **MinIO** as the foundation of the Lakehouse.
 
-MinIO runs in a lightweight Docker container (`infra/docker-compose.yml`) and exposes an S3-compatible API on port 9000. 
+MinIO runs in a lightweight Docker container defined in the root `docker-compose.yml` and exposes an S3-compatible API on port 9000.
 
 All Spark jobs and DuckDB connections are configured to use the `s3a://` protocol. They authenticate with MinIO using standard Access and Secret keys defined in the `.env` file, exactly as they would with a real AWS S3 bucket.
 

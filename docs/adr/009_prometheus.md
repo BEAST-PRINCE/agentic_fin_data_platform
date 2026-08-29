@@ -26,7 +26,7 @@ To expose metrics from the FastAPI backend, I utilized the `prometheus-fastapi-i
 Furthermore, I instrumented custom metrics in the Multi-Agent orchestrator (`src/serving/core/metrics.py`) to explicitly track the execution time of individual agents (Planner vs. Researcher vs. Analyst) and tool calls.
 
 ## 📈 Consequences
-* **Positive:** Deep transparency. By looking at the Grafana dashboard on `localhost:3000`, I can immediately identify bottlenecks. (e.g., Seeing that the Spark Gold job takes 3 minutes, but DuckDB reads the output in 50ms).
+* **Positive:** Local visibility into API, agent, vector-search, and maintained lakehouse metrics through Grafana on `localhost:3000`. The repository does not currently provide a benchmark-backed 3-minute/50-millisecond comparison.
 * **Positive:** Local-first compliance. Telemetry data stays on the local machine.
 * **Negative:** Writing custom Prometheus PromQL queries to build Grafana dashboards requires a steep learning curve compared to managed services that auto-generate dashboards.
 
